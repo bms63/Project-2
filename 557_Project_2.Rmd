@@ -7,6 +7,7 @@ output: pdf_document
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
+### Testing out Github
 rm(list=ls())
 par(mfrow=c(1,1))
 # Loading packages into R
