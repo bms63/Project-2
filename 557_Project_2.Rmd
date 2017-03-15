@@ -1,0 +1,65 @@
+---
+title: "557_Project_2BS"
+author: "Ben Straub"
+date: "3/15/2017"
+output: pdf_document
+---
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+rm(list=ls())
+par(mfrow=c(1,1))
+# Loading packages into R
+library(data.table);library(car);library(lars);library(knitr);library(ISLR);library(leaps);library(glmnet);library(MASS);library(reshape)
+
+setwd("/Users/benStraub/Desktop/557/Project 2")
+seismic <- read.csv("seismic.csv")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# EDA
+names(seismic)
+summary(seismic)
+```
+
+```{r, echo=FALSE}
+### Making nice and pretty
+
+### Dropping seismic for now...maybe should be our focus
+seismic <- seismic[,-1]
+
+### Focus on "Seismoacoustic" and renaming to y...so I don't have to type it!!
+seismic <- rename(seismic, c(seismoacoustic="y"))
+
+#2584x19 matrix
+n=dim(seismic)[1]
+p=dim(seismic)[2]
+
+# Setting up 
+set.seed(2016)
+test=sample(n, round(n/4))
+
+### Seperating data into Test and Training Sets
+# Train
+y.train <- seismic$y[-test]
+X.train <- seismic[-test,]
+
+# Test
+y.test <- seismic$y[test]
+X.test <- seismic[test,]
+
+### Training Data Matrix
+seismic.train <- as.data.frame(cbind(y.train,X.train))
+seismic.train <- seismic.train[,-2]
+
+### Testing Data Matrix
+seismic.test <- as.data.frame(cbind(y.test, X.test))
+seismic.test <- seismic.test[,-2]
+
+#View(seismic.train)
+#View(seismic.test)
+```
+
+
+
+
