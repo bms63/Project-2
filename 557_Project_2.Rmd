@@ -1,12 +1,9 @@
 ---
 title: "557_Project_2BS"
-author: "Ben Straub"
+author: "Ben Straub, Hillary Koch, Jiawei Huang, Arif Masrur"
 date: "3/15/2017"
 output: pdf_document
 ---
-
-## Hi Arif!!!!
-
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 ### Testing out Github
@@ -19,16 +16,18 @@ setwd("/Users/benStraub/Desktop/557/Project 2")
 seismic <- read.csv("seismic.csv")
 ```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 # EDA
 names(seismic)
 summary(seismic)
-df <- data.frame(a=1:3, d=4:7, c=8, b=9:19)
-Data <- subset( Data, select = -a )
-cor(seismic)
+# Correlation Plot of the data...7 variables removed
+source("http://www.sthda.com/upload/rquery_cormat.r")
+x <- seismic[c(-1,-2,-3,-8,-14,-15,-16,-19)]
+require("corrplot")
+rquery.cormat(x)       
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 ### Making nice and pretty
 
 ### Dropping seismic for now...maybe should be our focus
