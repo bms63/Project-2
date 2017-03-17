@@ -31,10 +31,10 @@ rquery.cormat(x)
 ### Making nice and pretty
 
 ### Dropping seismic for now...maybe should be our focus
-seismic <- seismic[,-1]
+seismic <- seismic[,-2]
 
 ### Focus on "Seismoacoustic" and renaming to y...so I don't have to type it!!
-seismic <- rename(seismic, c(seismoacoustic="y"))
+seismic <- rename(seismic, c(seismic="y.train"))
 
 #2584x19 matrix
 n=dim(seismic)[1]
@@ -54,10 +54,12 @@ y.test <- seismic$y[test]
 X.test <- seismic[test,]
 
 ### Training Data Matrix
+### 1938 obs in Training Set
 seismic.train <- as.data.frame(cbind(y.train,X.train))
 seismic.train <- seismic.train[,-2]
 
 ### Testing Data Matrix
+### 646 obs in Test Set
 seismic.test <- as.data.frame(cbind(y.test, X.test))
 seismic.test <- seismic.test[,-2]
 
@@ -66,5 +68,28 @@ seismic.test <- seismic.test[,-2]
 ```
 
 
+```{r}
 
+############# LOGISTIC REGRESSION ###################
 
+### Training Set on Logistic Regression
+glm.fit=glm(y.train~., data=seismic.train ,family=binomial)
+summary(glm.fit)
+glm.probs=predict(glm.fit ,type="response")
+glm.probs[1:10]
+contrasts(seismic.train$y.train)
+
+glm.pred=rep("a",1938)
+glm.pred[glm.probs >.5]="b"
+table(glm.pred ,y.train)
+mean(glm.pred==y.train)
+
+### Testing Set on Logistic Regression
+glm.fit=glm(y.test~., data=seismic.test ,family=binomial)
+glm.probs=predict(glm.fit, type="response")
+
+glm.pred=rep("a",646)
+glm.pred[glm.probs >.5]="b"
+table(glm.pred, y.test)
+mean(glm.pred==y.test)
+```
