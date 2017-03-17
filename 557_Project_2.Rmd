@@ -16,19 +16,44 @@ setwd("/Users/benStraub/Desktop/557/Project 2")
 seismic <- read.csv("seismic.csv")
 ```
 
+# Boring Stuff on the dataset
+
+## Names of Variables
+
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 # EDA
 names(seismic)
+```
+
+## Summary Statistics
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 summary(seismic)
+```
+
+## Dimensions of Data Matrix
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+dim(seismic)
+```
+
+# Correlation of the Variables 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 # Correlation Plot of the data...7 variables removed
 source("http://www.sthda.com/upload/rquery_cormat.r")
 x <- seismic[c(-1,-2,-3,-8,-14,-15,-16,-19)]
 require("corrplot")
-rquery.cormat(x)       
+rquery.cormat(x, type="flatten", graphType = "heatmap")
+rquery.cormat(x, type="flatten")
+
+#rquery.cormat(x, type="flatten", graph=FALSE)
+
 ```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ### Making nice and pretty
+### Nothing is normalized or standardized...unsure if we need to do that
 
 ### Dropping seismic for now...maybe should be our focus
 seismic <- seismic[,-2]
@@ -67,8 +92,9 @@ seismic.test <- seismic.test[,-2]
 #View(seismic.test)
 ```
 
+# Logistic Regression on the Training and Test Sets
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
 ############# LOGISTIC REGRESSION ###################
 
@@ -76,14 +102,27 @@ seismic.test <- seismic.test[,-2]
 glm.fit=glm(y.train~., data=seismic.train ,family=binomial)
 summary(glm.fit)
 glm.probs=predict(glm.fit ,type="response")
-glm.probs[1:10]
-contrasts(seismic.train$y.train)
+
+```
+
+The predictors that are significant in our logistic model are genergy, gpuls and ghazardb and a couple more.  The predictors nbumps6, nbumps7 and nbumps89 are not defined due to singularities, which may indicated collinearity.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+### Training Set on Logistic Regression Continued
+#glm.probs[1:10]
+#contrasts(seismic.train$y.train)
 
 glm.pred=rep("a",1938)
 glm.pred[glm.probs >.5]="b"
 table(glm.pred ,y.train)
 mean(glm.pred==y.train)
 
+```
+
+The diagonal elements of the confusion matrix indicate correct predictions,
+while the off-diagonals represent incorrect predictions. Hence our model on the training data set correctly predicted that the seismic activity would be of no harzard on 1176 observations and that it would be a low hazard on 230 observations, for a total of 1176 + 230 = 1406 correct predictions. The mean() function can be used to compute the fraction of seismic activity for which the prediction was correct. In this case, logistic regression correctly predicted the movement of the market 73 percent of the time.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 ### Testing Set on Logistic Regression
 glm.fit=glm(y.test~., data=seismic.test ,family=binomial)
 glm.probs=predict(glm.fit, type="response")
@@ -93,3 +132,8 @@ glm.pred[glm.probs >.5]="b"
 table(glm.pred, y.test)
 mean(glm.pred==y.test)
 ```
+
+The diagonal elements of the confusion matrix indicate correct predictions,
+while the off-diagonals represent incorrect predictions. Hence our model on the testing data set correctly predicted that the seismic activity would be of no harzard on 352 observations and that it would be a low hazard on 110 days, for a total of 352 + 110 = 462 correct predictions. The mean() function can be used to compute the fraction of seismic activity for which the prediction was correct. In this case, logistic regression correctly predicted the movement of the market 71.5 percent of the time.
+
+Recall that the logistic regression model had only 7ish predictors that were significant from an avaiable 17.  Perhaps by removing the variables that appear not to be helpful in predicting seismic hazard, we can obtain a more effective model. After all, using predictors that have no relationship with the response tends to cause a deterioration in the test error rate (since such predictors cause an increase in variance without a corresponding decrease in bias), and so removing such predictors may in turn yield an improvement [straight from the book]
