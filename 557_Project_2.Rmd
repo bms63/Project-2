@@ -37,6 +37,50 @@ summary(seismic)
 dim(seismic)
 ```
 
+## Check for Normality of Data
+
+```{r}
+par(mfrow=c(2,2))
+
+# Barplots of Factor Variables
+counts <- table(seismic$seismic)
+barplot(counts, main="Seismic Distribution", 
+  	xlab="Number of Obs")
+counts <- table(seismic$seismoacoustic)
+barplot(counts, main="Seismoacoustic Distribution", 
+  	xlab="Number of Obs")
+counts <- table(seismic$ghazard)
+barplot(counts, main="Ghazard Distribution", 
+  	xlab="Number of Obs")
+
+## Have a look at the densities
+
+plot(density(seismic$genergy));plot(density(seismic$gpuls))
+plot(density(seismic$gdenergy));plot(density(seismic$gdpuls))
+plot(density(seismic$maxenergy));plot(density(seismic$nbumps))
+plot(density(seismic$nbumps2));plot(density(seismic$nbumps3))
+plot(density(seismic$nbumps4));plot(density(seismic$nbumps5))
+plot(density(seismic$nbumps6));plot(density(seismic$nbumps7))
+plot(density(seismic$nbumps89));plot(density(seismic$energy))
+
+## Plot using a qqplot
+qqnorm(seismic$genergy);qqline(seismic$genergy, col = 2)
+qqnorm(seismic$gdpuls);qqline(seismic$gdpuls, col = 2)
+qqnorm(seismic$gdenergy);qqline(seismic$gdenergy, col = 2)
+qqnorm(seismic$maxenergy);qqline(seismic$maxenergy, col = 2)
+qqnorm(seismic$nbumps);qqline(seismic$nbumps, col = 2)
+qqnorm(seismic$nbumps2);qqline(seismic$nbumps2, col = 2)
+qqnorm(seismic$nbumps3);qqline(seismic$nbumps3, col = 2)
+qqnorm(seismic$nbumps4);qqline(seismic$nbumps4, col = 2)
+qqnorm(seismic$nbumps5);qqline(seismic$nbumps5, col = 2)
+qqnorm(seismic$nbumps6);qqline(seismic$nbumps6, col = 2)
+qqnorm(seismic$nbumps7);qqline(seismic$nbumps7, col = 2)
+qqnorm(seismic$nbumps89);qqline(seismic$nbumps89, col = 2)
+qqnorm(seismic$energy);qqline(seismic$energy, col = 2)
+
+
+```
+
 # Correlation of the Variables 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
