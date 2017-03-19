@@ -1,0 +1,44 @@
+---
+title: "Indicator Example Code"
+author: "Ben Straub"
+date: "3/19/2017"
+output: pdf_document
+---
+
+```{r}
+library(data.table)
+# set the working directory 
+# comma delimited data and no header for each variable 
+RawData <- fread("http://mlearn.ics.uci.edu/databases/pima-indians-diabetes/pima-indians-diabetes.data", header=F)
+RawData <- as.data.frame(RawData)
+#In Raw Data, the response variable is its last column; 
+#and the remaining columns are the predictor variables.
+
+responseY <- RawData[9]
+predictorX <- RawData[,1:8]
+
+pc.comp <- princomp(scale(predictorX))
+screeplot(pc.comp, type="line")
+
+pc.comp <- princomp(scale(predictorX))$scores 
+pc.comp1 <- pc.comp[,1]
+pc.comp2 <- pc.comp[,2] 
+X <- cbind(1,pc.comp1, pc.comp2)
+
+class1 <- which(responseY==0) 
+class2 <- which(responseY==1) 
+Y <- matrix(0,dim(responseY)[1],2) 
+Y[class2,1] <- 1 
+Y[class1,2] <- 1
+
+betaHat <- solve(t(X)%*%X)%*%t(X)%*%Y 
+Y1 <- X%*%betaHat[,1] 
+Y2 <- X%*%betaHat[,2]
+
+plot(pc.comp1[class1],pc.comp2[class1],main="scatter plot",
+     xlab="pcaComp1",ylab="pcaComp2",col="red") 
+points(pc.comp1[class2],pc.comp2[class2],col="blue")
+
+View(RawData)
+
+```

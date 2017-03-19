@@ -43,6 +43,9 @@ dim(seismic)
 par(mfrow=c(2,2))
 
 # Barplots of Factor Variables
+counts <- table(seismic$class)
+barplot(counts, main="Seismic Distribution", 
+  	xlab="Number of Obs")
 counts <- table(seismic$seismic)
 barplot(counts, main="Seismic Distribution", 
   	xlab="Number of Obs")
@@ -100,10 +103,10 @@ rquery.cormat(x, type="flatten")
 ### Nothing is normalized or standardized...unsure if we need to do that
 
 ### Dropping seismic for now...maybe should be our focus
-seismic <- seismic[,-2]
+#seismic <- seismic[,-2]
 
 ### Renaming response variable
-seismic <- rename(seismic, c(seismic="y.train"))
+seismic <- rename(seismic, c(class="y"))
 
 #2584x19 matrix
 n=dim(seismic)[1]
@@ -125,12 +128,12 @@ X.test <- seismic[test,]
 ### Training Data Matrix
 ### 1938 obs in Training Set
 seismic.train <- as.data.frame(cbind(y.train,X.train))
-seismic.train <- seismic.train[,-2]
+seismic.train <- seismic.train[,-20]
 
 ### Testing Data Matrix
 ### 646 obs in Test Set
 seismic.test <- as.data.frame(cbind(y.test, X.test))
-seismic.test <- seismic.test[,-2]
+seismic.test <- seismic.test[,-20]
 
 #View(seismic.train)
 #View(seismic.test)
@@ -145,10 +148,11 @@ par(mfrow=c(1,1))
 ## Getting data ready to perform pca/indactor matrix
 setwd("/Users/benStraub/Desktop/557/Project 2")
 RawData <- read.csv("seismic.csv",sep=",", dec=",")
-RawData$seismic <- as.integer(RawData$seismic  == "a")
-RawData <- RawData[c(-2,-3,-8,-14,-15,-16,-19)]#getting rid of factor variable for now, nbumps greater than five have almost entirely 0 columns
+#RawData$seismic <- as.integer(RawData$seismic  == "a")
+RawData <- RawData[c(-1,-2,-3,-8,-14,-15,-16)]#getting rid of factor variable for now, nbumps greater than five have almost entirely 0 columns
 #RawData <- RawData[-1,]#getting rid of variables names to run pca
-responseY <- RawData[1]#selecting our response of interest
+
+responseY <- RawData[12]#selecting our response of interest
 predictorX <- RawData[,2:11]
 
 #running pca
@@ -216,8 +220,8 @@ The predictors that are significant in our logistic model are genergy, gpuls and
 #glm.probs[1:10]
 #contrasts(seismic.train$y.train)
 
-glm.pred=rep("a",1938)
-glm.pred[glm.probs >.5]="b"
+glm.pred=rep("0",1938)
+glm.pred[glm.probs >.5]="1"
 table(glm.pred ,y.train)
 mean(glm.pred==y.train)
 
@@ -231,8 +235,8 @@ while the off-diagonals represent incorrect predictions. Hence our model on the 
 glm.fit=glm(y.test~., data=seismic.test ,family=binomial)
 glm.probs=predict(glm.fit, type="response")
 
-glm.pred=rep("a",646)
-glm.pred[glm.probs >.5]="b"
+glm.pred=rep("0",646)
+glm.pred[glm.probs >.5]="1"
 table(glm.pred, y.test)
 mean(glm.pred==y.test)
 ```
