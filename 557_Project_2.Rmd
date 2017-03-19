@@ -39,7 +39,7 @@ dim(seismic)
 
 ## Check for Normality of Data
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 par(mfrow=c(2,2))
 
 # Barplots of Factor Variables
@@ -102,7 +102,7 @@ rquery.cormat(x, type="flatten")
 ### Dropping seismic for now...maybe should be our focus
 seismic <- seismic[,-2]
 
-### Focus on "Seismoacoustic" and renaming to y...so I don't have to type it!!
+### Renaming response variable
 seismic <- rename(seismic, c(seismic="y.train"))
 
 #2584x19 matrix
@@ -135,6 +135,66 @@ seismic.test <- seismic.test[,-2]
 #View(seismic.train)
 #View(seismic.test)
 ```
+
+# Linear regression of an indicator matrix
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+# Setting Graphics parameters
+par(mfrow=c(1,1))
+
+## Getting data ready to perform pca/indactor matrix
+setwd("/Users/benStraub/Desktop/557/Project 2")
+RawData <- read.csv("seismic.csv",sep=",", dec=",")
+RawData$seismic <- as.integer(RawData$seismic  == "a")
+RawData <- RawData[c(-2,-3,-8,-14,-15,-16,-19)]#getting rid of factor variable for now, nbumps greater than five have almost entirely 0 columns
+#RawData <- RawData[-1,]#getting rid of variables names to run pca
+responseY <- RawData[1]#selecting our response of interest
+predictorX <- RawData[,2:11]
+
+#running pca
+pc.comp <- princomp(scale(predictorX)) 
+
+#Creates screeplot to figure out which pc's to include
+screeplot(pc.comp, type="lines")
+pc.comp <- princomp(scale(predictorX))$scores 
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+par(mfrow=c(1,1))
+
+#Based on scree plot im going to go with 3 pc scores
+pc.comp1 <- pc.comp[,1] 
+pc.comp2 <- pc.comp[,2] 
+pc.comp3 <- pc.comp[,3] 
+X <- cbind(1,pc.comp1, pc.comp2,pc.comp3)
+
+#View(RawData)
+#View(predictorX)
+#View(responseY)
+
+# Following LeBao's code
+class1 <- which(responseY==1) 
+class2 <- which(responseY==0) 
+Y <- matrix(0,dim(responseY)[1],2) 
+Y[class2,1] <- 1 
+Y[class1,2] <- 1
+
+betaHat <- solve(t(X)%*%X)%*%t(X)%*%Y 
+Y1 <- X%*%betaHat[,1] 
+Y2 <- X%*%betaHat[,2]
+
+# Plots the pca scores...doesn't look good.
+plot(pc.comp1[class1],pc.comp2[class1],main="PC1 vs PC2",xlab="pcaComp1",ylab="pcaComp2",col="red") 
+points(pc.comp1[class2],pc.comp2[class2],col="blue")
+
+plot(pc.comp1[class1],pc.comp3[class1],main="PC1 vs PC3",xlab="pcaComp1",ylab="pcaComp2",col="red") 
+points(pc.comp1[class2],pc.comp3[class2],col="blue")
+
+plot(pc.comp2[class1],pc.comp3[class1],main="PC2 vs PC3",xlab="pcaComp1",ylab="pcaComp2",col="red") 
+points(pc.comp2[class2],pc.comp3[class2],col="blue")
+
+```
+
 
 # Logistic Regression on the Training and Test Sets
 
