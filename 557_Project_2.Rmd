@@ -26,7 +26,7 @@ seismic <- read.csv("seismic.csv")
 names(seismic)
 ```
 
-## Summary Statistics
+## Summary Statistics is this a change
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 summary(seismic)
