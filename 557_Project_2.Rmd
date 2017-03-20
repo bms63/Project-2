@@ -68,12 +68,13 @@ par(mfrow=c(2,2))
 ## Have a look at the densities
 
 plot(density(seismic$genergy));plot(density(seismic$gpuls))
-plot(density(log(seismic$genergy)));plot(density(log(seismic$gpuls)))
+
+#plot(density(log(seismic$genergy)));plot(density(log(seismic$gpuls)))
 
 plot(density(seismic$gdenergy));plot(density(seismic$gdpuls))
-plot(density(seismic$maxenergy));plot(density(seismic$nbumps))
-plot(density(seismic$nbumps2));plot(density(seismic$nbumps3))
-plot(density(seismic$nbumps4));plot(density(seismic$nbumps5))
+plot(density(seismic$maxenergy));plot(density(seismic$nbumps, adjust=10))
+plot(density(seismic$nbumps2,adjust=10));plot(density(seismic$nbumps3,adjust=10))
+plot(density(seismic$nbumps4,adjust=10));plot(density(seismic$nbumps5,adjust=10))
 
 ##---------------------------------------------
 ## Some quick EDA from Hillary
@@ -167,6 +168,9 @@ predictorX <- RawData[,2:11]
 #running pca
 pc.comp <- princomp(scale(predictorX)) 
 
+#  for pc
+# pc.comp$loadings
+
 #Creates screeplot to figure out which pc's to include
 screeplot(pc.comp, type="lines")
 pc.comp <- princomp(scale(predictorX))$scores 
@@ -181,9 +185,6 @@ pc.comp2 <- pc.comp[,2]
 pc.comp3 <- pc.comp[,3] 
 X <- cbind(1,pc.comp1, pc.comp2,pc.comp3)
 
-#View(RawData)
-#View(predictorX)
-#View(responseY)
 
 # Following LeBao's code
 class1 <- which(responseY==1) 
@@ -336,9 +337,50 @@ The predictors that are significant in our logistic model are seismic, shift and
 
 glm.pred=rep("0",1938)
 glm.pred[glm.probs >.5]="1"
-table(glm.pred ,seismic.train$class)
+confusion <- table(glm.pred ,seismic.train$class)
 mean(glm.pred==seismic.train$class)
 
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion
+sensitivity
+specificity
+
+library(pROC)
+
+fit.glm <- glm(class~., seismic.train, family=binomial(link="logit"))
+
+glm.link.scores <- predict(fit.glm, seismic.test, type="link")
+
+glm.response.scores <- predict(fit.glm, seismic.test, type="response")
+
+score_data <- data.frame(link=glm.link.scores, 
+                         response=glm.response.scores,
+                         class=seismic.test$class,
+                         stringsAsFactors=FALSE)
+
+#score_data %>% 
+#  ggplot(aes(glm.link.scores=link, y=response, col=class)) + 
+#  scale_color_manual(values=c("black", "red")) + 
+#  geom_point() + 
+#  geom_rug() + 
+#  ggtitle("Both link and response scores put cases in the same order")
+
+library(pROC)
+
+plot(roc(seismic.test$class, glm.response.scores, direction="<"),
+     col="yellow", lwd=3, main="The turtle finds its way")
+
+roc(seismic.test$class, glm.response.scores, direction="<")
+
+#simple_roc <- function(labels, scores){
+#  labels <- labels[order(scores, decreasing=TRUE)]
+#  data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), labels)
+#}
+
+#glm_simple_roc <- simple_roc(seismic.test$class=="TRUE", glm.link.scores)
+#with(glm_simple_roc, points(1 - FPR, TPR, col=1 + labels))
 ```
 
 The diagonal elements of the confusion matrix indicate correct predictions,
@@ -351,8 +393,16 @@ glm.probs=predict(glm.fit, type="response")
 
 glm.pred=rep("0",646)
 glm.pred[glm.probs >.5]="1"
-table(glm.pred, seismic.test$class)
+confusion <- table(glm.pred, seismic.test$class)
 mean(glm.pred==seismic.test$class)
+
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+## Sensitivity is very bad! Dramatically underpredict 1s
+confusion
+sensitivity
+specificity
 ```
 
 The diagonal elements of the confusion matrix indicate correct predictions,
