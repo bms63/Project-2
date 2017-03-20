@@ -295,6 +295,23 @@ confusion
 sensitivity
 specificity
 
+posterior <- lda.pred$posterior
+truth <- seismic.train$class
+output.test <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
+colnames(output.test) <- c("Sensitivity", "Error.rate")
+
+for(i in 1:length(prob.seq)){
+  output.test[i,] <- mod.posterior(posterior,truth,prob.seq[i])[c(1,3)]
+}
+
+df <- as.data.frame(cbind(prob.seq,output))
+
+ggplot(data = df, aes(x=prob.seq)) +
+  geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
+  geom_line(aes(y = Error.rate, colour = "Error rate")) +
+  scale_colour_manual(values=c("dark cyan", "dark grey"))
+
+
 #
 # NOTE: We can modify LDA such by changing the RHS of P(class = 1|X=x) > 0.5 to something smaller
 # This will yield a larger error rate, but with better identification of 1s, which is more important in this case
