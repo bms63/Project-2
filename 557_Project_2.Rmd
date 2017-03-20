@@ -10,13 +10,14 @@ output: pdf_document
 rm(list=ls())
 par(mfrow=c(1,1))
 # Loading packages into R
-library(data.table);library(car);library(lars);library(knitr);library(ISLR);library(leaps);library(glmnet);library(MASS);library(reshape)
+library(data.table);library(car);library(lars);library(knitr);library(ISLR);library(leaps);library(glmnet);library(MASS);library(reshape);library(ggplot2)
+
 
 setwd("/Users/benStraub/Desktop/557/Project 2")
 seismic <- read.csv("seismic.csv")
 ```
 
-# Boring Stuff on the dataset
+# EDA in no particular order of sanity
 
 ## Names of Variables
 
@@ -37,14 +38,14 @@ summary(seismic)
 dim(seismic)
 ```
 
-## Check for Normality of Data
+## What the Factor Variables look like
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 par(mfrow=c(2,2))
 
 # Barplots of Factor Variables
 counts <- table(seismic$class)
-barplot(counts, main="Seismic Distribution", 
+barplot(counts, main="Class/Response Distribution", 
   	xlab="Number of Obs")
 counts <- table(seismic$seismic)
 barplot(counts, main="Seismic Distribution", 
@@ -55,85 +56,92 @@ barplot(counts, main="Seismoacoustic Distribution",
 counts <- table(seismic$ghazard)
 barplot(counts, main="Ghazard Distribution", 
   	xlab="Number of Obs")
+```
+
+## What the Continuous Variables look like
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, cache=TRUE}
+par(mfrow=c(2,2))
 
 ## Have a look at the densities
 
 plot(density(seismic$genergy));plot(density(seismic$gpuls))
+plot(density(log(seismic$genergy)));plot(density(log(seismic$gpuls)))
+
 plot(density(seismic$gdenergy));plot(density(seismic$gdpuls))
 plot(density(seismic$maxenergy));plot(density(seismic$nbumps))
 plot(density(seismic$nbumps2));plot(density(seismic$nbumps3))
 plot(density(seismic$nbumps4));plot(density(seismic$nbumps5))
-plot(density(seismic$nbumps6));plot(density(seismic$nbumps7))
-plot(density(seismic$nbumps89));plot(density(seismic$energy))
 
-## Plot using a qqplot
-qqnorm(seismic$genergy);qqline(seismic$genergy, col = 2)
-qqnorm(seismic$gdpuls);qqline(seismic$gdpuls, col = 2)
-qqnorm(seismic$gdenergy);qqline(seismic$gdenergy, col = 2)
-qqnorm(seismic$maxenergy);qqline(seismic$maxenergy, col = 2)
-qqnorm(seismic$nbumps);qqline(seismic$nbumps, col = 2)
-qqnorm(seismic$nbumps2);qqline(seismic$nbumps2, col = 2)
-qqnorm(seismic$nbumps3);qqline(seismic$nbumps3, col = 2)
-qqnorm(seismic$nbumps4);qqline(seismic$nbumps4, col = 2)
-qqnorm(seismic$nbumps5);qqline(seismic$nbumps5, col = 2)
-qqnorm(seismic$nbumps6);qqline(seismic$nbumps6, col = 2)
-qqnorm(seismic$nbumps7);qqline(seismic$nbumps7, col = 2)
-qqnorm(seismic$nbumps89);qqline(seismic$nbumps89, col = 2)
-qqnorm(seismic$energy);qqline(seismic$energy, col = 2)
+##---------------------------------------------
+## Some quick EDA from Hillary
+##---------------------------------------------
 
+## Normalize things that arent factors
+## Eliminate data that has no info (some of the nbumps)
+setwd("/Users/benStraub/Desktop/557/Project 2")
+seismic <- read.csv("seismic.csv")
 
+seismic[,c(4:7,9:13,17:18)] <- seismic[,c(4:7,9:13,17:18)]
+seismic <- seismic[,-(14:16)]
+
+for(i in c(1:3,8)){
+  seismic[,i] <- as.numeric(seismic[,i])
+}
+
+fit <- lm(class~., data = seismic)
+summary(fit)
+
+#pairs(seismic)
+
+## qqplots, except for factors
+for(i in c(4:7,9:15)){
+  eval(parse(text = paste0("qqnorm(seismic$",names(seismic)[i],")")))
+  eval(parse(text = paste0("qqline(seismic$",names(seismic)[i],", col = 2)")))
+}
+
+## Check out the residuals
+res <- fit$residuals
+fitvals <- fit$fitted
+plot(fitvals, res, xlab = "Fitted Values", ylab = "Residuals")
+abline(h=0, col = 'red')
+hist(res, xlab = "Residuals")
+```
+
+## Lots of multicollinearity to worry about during variable selection
+
+```{r}
+vif(fit)
 ```
 
 # Correlation of the Variables 
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, cache=TRUE}
 # Correlation Plot of the data...7 variables removed
 source("http://www.sthda.com/upload/rquery_cormat.r")
 x <- seismic[c(-1,-2,-3,-8,-14,-15,-16,-19)]
 require("corrplot")
-rquery.cormat(x, type="flatten", graphType = "heatmap")
+#rquery.cormat(x, type="flatten", graphType = "heatmap")
 rquery.cormat(x, type="flatten")
 
 #rquery.cormat(x, type="flatten", graph=FALSE)
-
 ```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-### Making nice and pretty
-### Nothing is normalized or standardized...unsure if we need to do that
+# Separating into Test and Training Sets
 
-### Dropping seismic for now...maybe should be our focus
-#seismic <- seismic[,-2]
+```{r, echo=TRUE, warning=FALSE, message=FALSE, comment=NA}
+##------------------------------------
+## Setting up
+##------------------------------------
 
-### Renaming response variable
-seismic <- rename(seismic, c(class="y"))
+n <- dim(seismic)[1]
+p <- dim(seismic)[2]
 
-#2584x19 matrix
-n=dim(seismic)[1]
-p=dim(seismic)[2]
-
-# Setting up 
 set.seed(2016)
-test=sample(n, round(n/4))
-
-### Seperating data into Test and Training Sets
-# Train
-y.train <- seismic$y[-test]
-X.train <- seismic[-test,]
-
-# Test
-y.test <- seismic$y[test]
-X.test <- seismic[test,]
-
-### Training Data Matrix
-### 1938 obs in Training Set
-seismic.train <- as.data.frame(cbind(y.train,X.train))
-seismic.train <- seismic.train[,-20]
-
-### Testing Data Matrix
-### 646 obs in Test Set
-seismic.test <- as.data.frame(cbind(y.test, X.test))
-seismic.test <- seismic.test[,-20]
+test <- sample(n, round(n/4))
+train <- (1:n)[-test]
+seismic.train <- seismic[train,]
+seismic.test <- seismic[test,]
 
 #View(seismic.train)
 #View(seismic.test)
@@ -150,7 +158,6 @@ setwd("/Users/benStraub/Desktop/557/Project 2")
 RawData <- read.csv("seismic.csv",sep=",", dec=",")
 #RawData$seismic <- as.integer(RawData$seismic  == "a")
 RawData <- RawData[c(-1,-2,-3,-8,-14,-15,-16)]#getting rid of factor variable for now, nbumps greater than five have almost entirely 0 columns
-#RawData <- RawData[-1,]#getting rid of variables names to run pca
 
 responseY <- RawData[12]#selecting our response of interest
 predictorX <- RawData[,2:11]
@@ -199,6 +206,111 @@ points(pc.comp2[class2],pc.comp3[class2],col="blue")
 
 ```
 
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+##------------------------------------
+## Fit LDA model
+##------------------------------------
+
+lda.fit <- lda(class~., data = seismic, subset = train)
+
+##
+## Predict back onto training data
+##
+
+lda.pred <- predict(lda.fit, seismic.train)
+lda.class <- lda.pred$class
+
+## Confusion matrix
+confusion <- table(lda.class,seismic.train$class)
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+## Sensitivity is very bad! Dramatically underpredict 1s
+confusion
+sensitivity
+specificity
+
+##
+## Here is a function that could calculate overall error rates
+## as a function of the posterior prediction probability threshhold
+##
+
+posterior <- lda.pred$posterior
+truth <- seismic.train$class
+
+mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
+  idx0 <- which(posterior[,1] > prob)
+  idx1 <- (1:dimension)[-idx0]
+  
+  prediction <- rep(NA,dimension)
+  prediction[idx0] = 0
+  prediction[idx1] = 1
+  
+  mx <- cbind(prediction,truth,prediction-truth)
+  
+  confusion <- matrix(rep(NA,4), nrow = 2)
+  correct <- which(mx[,3] == 0)
+  confusion[1,1] <- length(which(mx[correct,1] == 0))
+  confusion[2,2] <- length(which(mx[correct,1] == 1))
+  confusion[1,2] <- length(which(mx[,3] == -1))
+  confusion[2,1] <- length(which(mx[,3] == 1))
+  
+  sensitivity <- confusion[2,2]/sum(confusion[,2])
+  specificity <- confusion[1,1]/sum(confusion[,1])
+  error.rate <- (confusion[1,2] + confusion[2,1])/sum(confusion)
+  c(sensitivity, specificity, error.rate)
+}
+
+prob.seq <- seq(.5,.98,by = .02)
+output <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
+colnames(output) <- c("Sensitivity", "Error.rate")
+
+for(i in 1:length(prob.seq)){
+  output[i,] <- mod.posterior(posterior,truth,prob.seq[i])[c(1,3)]
+}
+
+df <- as.data.frame(cbind(prob.seq,output))
+
+ggplot(data = df, aes(x=prob.seq)) +
+  geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
+  geom_line(aes(y = Error.rate, colour = "Error rate")) +
+  scale_colour_manual(values=c("dark cyan", "dark grey"))
+  
+
+
+##
+## Now try on test data
+##
+
+lda.pred <- predict(lda.fit, seismic.test)
+lda.class <- lda.pred$class
+
+## Confusion matrix
+confusion <- table(lda.class,seismic.test$class)
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+## Sensitivity is slightly worse here
+confusion
+sensitivity
+specificity
+
+#
+# NOTE: We can modify LDA such by changing the RHS of P(class = 1|X=x) > 0.5 to something smaller
+# This will yield a larger error rate, but with better identification of 1s, which is more important in this case
+# Not sure at the moment how to search for optimal RHS, other than ROC curve, but we should definitely do this
+#
+
+##------------------------------------
+## Fit QDA model
+##------------------------------------
+
+## Currently, can't perform QDA.  This is probably due to multicollinearity in the model
+## (can't invert covariance matrix) but should be possible after variable selection
+
+#qda.fit <- qda(class~., data = seismic, subset = train)
+
+```
 
 # Logistic Regression on the Training and Test Sets
 
@@ -207,13 +319,13 @@ points(pc.comp2[class2],pc.comp3[class2],col="blue")
 ############# LOGISTIC REGRESSION ###################
 
 ### Training Set on Logistic Regression
-glm.fit=glm(y.train~., data=seismic.train ,family=binomial)
+glm.fit=glm(class~., data=seismic.train ,family=binomial)
 summary(glm.fit)
 glm.probs=predict(glm.fit ,type="response")
 
 ```
 
-The predictors that are significant in our logistic model are genergy, gpuls and ghazardb and a couple more.  The predictors nbumps6, nbumps7 and nbumps89 are not defined due to singularities, which may indicated collinearity.
+The predictors that are significant in our logistic model are seismic, shift and gpuls.  The predictors nbumps6, nbumps7 and nbumps89 were removed as they did not provide any data.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ### Training Set on Logistic Regression Continued
@@ -222,26 +334,26 @@ The predictors that are significant in our logistic model are genergy, gpuls and
 
 glm.pred=rep("0",1938)
 glm.pred[glm.probs >.5]="1"
-table(glm.pred ,y.train)
-mean(glm.pred==y.train)
+table(glm.pred ,seismic.train$class)
+mean(glm.pred==seismic.train$class)
 
 ```
 
 The diagonal elements of the confusion matrix indicate correct predictions,
-while the off-diagonals represent incorrect predictions. Hence our model on the training data set correctly predicted that the seismic activity would be of no harzard on 1176 observations and that it would be a low hazard on 230 observations, for a total of 1176 + 230 = 1406 correct predictions. The mean() function can be used to compute the fraction of seismic activity for which the prediction was correct. In this case, logistic regression correctly predicted the movement of the market 73 percent of the time.
+while the off-diagonals represent incorrect predictions. Hence our model on the training data set correctly predicted that the seismic activity would be of no harzard on 1786 observations and that it would be of hazard on 0 observations, for a total of 1786 + 0 = 1786 correct predictions. The mean() function can be used to compute the fraction of hazards for which the prediction was correct. In this case, logistic regression correctly predicted the class of hazard 92 percent of the time.  The bad part about this 92 percent of the time is that it did not get any of our actual real hazards observations correct!!!
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 ### Testing Set on Logistic Regression
-glm.fit=glm(y.test~., data=seismic.test ,family=binomial)
+glm.fit=glm(class~., data=seismic.test ,family=binomial)
 glm.probs=predict(glm.fit, type="response")
 
 glm.pred=rep("0",646)
 glm.pred[glm.probs >.5]="1"
-table(glm.pred, y.test)
-mean(glm.pred==y.test)
+table(glm.pred, seismic.test$class)
+mean(glm.pred==seismic.test$class)
 ```
 
 The diagonal elements of the confusion matrix indicate correct predictions,
-while the off-diagonals represent incorrect predictions. Hence our model on the testing data set correctly predicted that the seismic activity would be of no harzard on 352 observations and that it would be a low hazard on 110 days, for a total of 352 + 110 = 462 correct predictions. The mean() function can be used to compute the fraction of seismic activity for which the prediction was correct. In this case, logistic regression correctly predicted the movement of the market 71.5 percent of the time.
+while the off-diagonals represent incorrect predictions. Hence our model on the testing data set correctly predicted that the seismic activity would be of no harzard on 605 observations and that it would be hazardous on 2 observations, for a total of 602 + 2 = 604 correct predictions. The mean() function can be used to compute the fraction of seismic activity for which the prediction was correct. In this case, logistic regression correctly predicted class of hazard 93.5 % of the time.  However, again worrisome, is that the model miss 5 observations that were hazardous instances and 37 that were not hazardous.
 
-Recall that the logistic regression model had only 7ish predictors that were significant from an avaiable 17.  Perhaps by removing the variables that appear not to be helpful in predicting seismic hazard, we can obtain a more effective model. After all, using predictors that have no relationship with the response tends to cause a deterioration in the test error rate (since such predictors cause an increase in variance without a corresponding decrease in bias), and so removing such predictors may in turn yield an improvement [straight from the book]
+Recall that the logistic regression model had only 3 predictors that were significant from an avaiable 19.  Perhaps by removing the variables that appear not to be helpful in predicting seismic hazard, we can obtain a more effective model. After all, using predictors that have no relationship with the response tends to cause a deterioration in the test error rate (since such predictors cause an increase in variance without a corresponding decrease in bias), and so removing such predictors may in turn yield an improvement [straight from the book]
