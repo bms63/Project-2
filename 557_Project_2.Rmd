@@ -8,12 +8,12 @@ output: pdf_document
 # No Command Lines Ever.  Whoa
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-c# Configuring Space
+# Configuring Space
 rm(list=ls())
-par(mfrow=c(1,1))
 
 # Loading packages into R
-library(data.table);library(car);library(lars);library(knitr);library(ISLR);library(leaps);library(glmnet);library(MASS);library(reshape);library(ggplot2)
+library(data.table);library(car);library(lars);library(knitr);library(ISLR);library(leaps);library(glmnet);library(MASS);library(reshape);library(ggplot2);library(pROC)
+
 
 # Loading up files
 setwd("/Users/benStraub/Desktop/557/Project 2")
@@ -45,6 +45,7 @@ barplot(counts, main="Ghazard Distribution",
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, cache=TRUE}
 par(mfrow=c(2,2))
 
+## Looking at condtl distb within class
 ## Have a look at the densities
 
 plot(density(seismic$genergy));plot(density(seismic$gpuls))
@@ -137,72 +138,45 @@ dim(seismic.test)
 
 # Linear regression of an indicator matrix
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-##-----------------------------------------------------
-## Linear regression of an indicator matrix Part I (Train)
-##-----------------------------------------------------
+```{r}
+##-------------------------------------------
+## Fit Linear Regression to Indicator Matrix
+##-------------------------------------------
 
-# Setting Graphics parameters
-par(mfrow=c(1,1))
+fit.lm <- lm(class~., data=seismic.train)
+summary(fit.lm)
+fit.probs <- predict(fit.lm, type="response")
 
-## Getting data ready to perform pca/indactor matrix
-RawData.train <- seismic.train
-#RawData$seismic <- as.integer(RawData$seismic  == "a")
-#RawData.train <- RawData.train[c(-1,-2,-3,-8,-14,-15,-16)]#getting rid of factor variable for now, nbumps greater than five have almost entirely 0 columns
+# Train Data
+fit.pred=rep("0",1938)
+fit.pred[fit.probs >.5]="1"
+confusion <- table(fit.pred ,seismic.train$class)
+mean(fit.pred==seismic.train$class)
 
-responseY <- RawData.train[16]#selecting our response of interest
-predictorX <- RawData.train[,1:15]
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
 
-#running pca
-pc.comp <- princomp(scale(predictorX)) 
+## Sensitivity is very bad! Dramatically underpredict 1s
+confusion
+sensitivity
+specificity
 
-#  for pc
-# pc.comp$loadings
+# Test Data
+fit.probs <- predict(fit.lm, newdata=seismic.test, type="response")
 
-#Creates screeplot to figure out which pc's to include
-screeplot(pc.comp, type="lines")
-pc.comp <- princomp(scale(predictorX))$scores 
-```
+fit.pred=rep("0",646)
+fit.pred[fit.probs >.5]="1"
+confusion <- table(fit.pred, seismic.test$class)
+mean(fit.pred==seismic.test$class)
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-##-----------------------------------------------------
-## Linear regression of an indicator matrix Part II (Train)
-##-----------------------------------------------------
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
 
+## Sensitivity is very bad! Dramatically underpredict 1s
+confusion
+sensitivity
+specificity
 
-par(mfrow=c(1,1))
-
-#Based on scree plot im going to go with 3 pc scores
-pc.comp1 <- pc.comp[,1] 
-pc.comp2 <- pc.comp[,2] 
-pc.comp3 <- pc.comp[,3] 
-X <- cbind(1,pc.comp1, pc.comp2,pc.comp3)
-
-
-# Following LeBao's code
-class1 <- which(responseY==1) 
-class2 <- which(responseY==0) 
-Y <- matrix(0,dim(responseY)[1],2) 
-Y[class2,1] <- 1 
-Y[class1,2] <- 1
-
-betaHat <- solve(t(X)%*%X)%*%t(X)%*%Y 
-Y1 <- X%*%betaHat[,1] 
-Y2 <- X%*%betaHat[,2]
-
-# Plots the pca scores...doesn't look good.
-plot(pc.comp1[class1],pc.comp2[class1],main="PC1 vs PC2",xlab="pcaComp1",ylab="pcaComp2",col="red") 
-points(pc.comp1[class2],pc.comp2[class2],col="blue")
-
-plot(pc.comp1[class1],pc.comp3[class1],main="PC1 vs PC3",xlab="pcaComp1",ylab="pcaComp2",col="red") 
-points(pc.comp1[class2],pc.comp3[class2],col="blue")
-
-plot(pc.comp2[class1],pc.comp3[class1],main="PC2 vs PC3",xlab="pcaComp1",ylab="pcaComp2",col="red") 
-points(pc.comp2[class2],pc.comp3[class2],col="blue")
-
-
-## Not sure how to figure out misclasssfication rate for Training Date Sets
-## Not sure how to run the Testing Data through the model
 ```
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
@@ -275,8 +249,6 @@ ggplot(data = df, aes(x=prob.seq)) +
   geom_line(aes(y = Error.rate, colour = "Error rate")) +
   scale_colour_manual(values=c("dark cyan", "dark grey"))
   
-
-
 ##
 ## Now try on test data
 ##
@@ -310,7 +282,6 @@ ggplot(data = df, aes(x=prob.seq)) +
   geom_line(aes(y = Error.rate, colour = "Error rate")) +
   scale_colour_manual(values=c("dark cyan", "dark grey"))
 
-
 #
 # NOTE: We can modify LDA such by changing the RHS of P(class = 1|X=x) > 0.5 to something smaller
 # This will yield a larger error rate, but with better identification of 1s, which is more important in this case
@@ -332,32 +303,24 @@ ggplot(data = df, aes(x=prob.seq)) +
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
-##------------------------------------
-## Logistic Regression (Train)
-##------------------------------------
-
-seismic.train$class <- as.factor(seismic.train$class)
-seismic.test$class <- as.factor(seismic.test$class)
-
-glm.fit=glm(class~., data=seismic.train ,family=binomial)
-summary(glm.fit)
-glm.probs=predict(glm.fit ,type="response")
-
-```
-
-The predictors that are significant in our logistic model are seismic, shift and gpuls.  The predictors nbumps6, nbumps7 and nbumps89 were removed as they did not provide any data.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-
 ##--------------------------------------------
-## Logistic Regression (TRAIN) Confusion\Roc
+## Logistic Regression  Confusion\Roc
 ##--------------------------------------------
-par(mfrow=c(1,1))
+
+# Model fitted to Training Data
+glm.train <- glm(class~., seismic.train, family=binomial)
+
+# Model Summary
+summary(glm.train)
+
+glm.probs=predict(glm.train, type="response")
 
 glm.pred=rep("0",1938)
-glm.pred[glm.probs >.5]="1"
+glm.pred[glm.probs >.3]="1"
 confusion <- table(glm.pred ,seismic.train$class)
 mean(glm.pred==seismic.train$class)
+
+roc.Train <- roc(seismic.train$class, glm.probs, direction = "<")
 
 # Confusion Table
 sensitivity <- confusion[2,2]/sum(confusion[,2])
@@ -367,30 +330,11 @@ confusion
 sensitivity
 specificity
 
-library(pROC)
-
-# Setting up for Roc Curve
-fit.glm.train <- glm(class~., seismic.train, family=binomial(link="logit"))
-glm.link.scores.train <- predict(fit.glm.train, seismic.train, type="link")
-glm.response.scores.train <- predict(fit.glm.train, seismic.train, type="response")
-roc.Train <- roc(seismic.train$class, glm.response.scores.train, direction="<")
-
-```
-
-The diagonal elements of the confusion matrix indicate correct predictions,
-while the off-diagonals represent incorrect predictions. Hence our model on the training data set correctly predicted that the seismic activity would be of no harzard on 1786 observations and that it would be of hazard on 0 observations, for a total of 1786 + 0 = 1786 correct predictions. The mean() function can be used to compute the fraction of hazards for which the prediction was correct. In this case, logistic regression correctly predicted the class of hazard 92 percent of the time.  The bad part about this 92 percent of the time is that it did not get any of our actual real hazards observations correct!!!
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-
-##--------------------------------------------
-## Logistic Regression (TEST) Confusion\Roc
-##--------------------------------------------
-
-glm.fit=glm(class~., data=seismic.test ,family=binomial)
-glm.probs=predict(glm.fit, type="response")
+# Using Training model on Test Data
+glm.probs=predict(glm.train, seismic.test, type="response")
 
 glm.pred=rep("0",646)
-glm.pred[glm.probs >.5]="1"
+glm.pred[glm.probs >.3]="1"
 confusion <- table(glm.pred, seismic.test$class)
 mean(glm.pred==seismic.test$class)
 
@@ -402,37 +346,77 @@ confusion
 sensitivity
 specificity
 
-# Setting up for Roc Curve
-fit.glm.test <- glm(class~., seismic.test, family=binomial(link="logit"))
-glm.link.scores.test <- predict(fit.glm.test, seismic.test, type="link")
-glm.response.scores.test <- predict(fit.glm.test, seismic.test, type="response")
-roc.Test <- roc(seismic.test$class, glm.response.scores.test, direction="<")
+roc.Test <- roc(seismic.test$class, glm.probs, direction="<")
 
-# Plotting Roc Curve
-plot.roc(roc.Train, col="blue", auc.polygon=TRUE,main="ROC Curve", xlab="False Positive Rate", ylab="True Positive Rate")
-legend("bottomright", legend=c("Train", "Test"), col=c("blue", "red"), lwd=2)
-plot.roc(roc.Test, col="red", lty=3, add=TRUE)
-
+# Plotting Roc Curve for Test Data
+plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve", xlab="False Positive Rate", ylab="True Positive Rate", print.auc=TRUE)
+plot.roc(roc.Train, add=TRUE)
 ```
 
-The diagonal elements of the confusion matrix indicate correct predictions,
-while the off-diagonals represent incorrect predictions. Hence our model on the testing data set correctly predicted that the seismic activity would be of no harzard on 605 observations and that it would be hazardous on 2 observations, for a total of 602 + 2 = 604 correct predictions. The mean() function can be used to compute the fraction of seismic activity for which the prediction was correct. In this case, logistic regression correctly predicted class of hazard 93.5 % of the time.  However, again worrisome, is that the model miss 5 observations that were hazardous instances and 37 that were not hazardous.
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+##-----------------------------------------------------
+## Principle Component Analysis 
+##-----------------------------------------------------
 
-Recall that the logistic regression model had only 3 predictors that were significant from an avaiable 19.  Perhaps by removing the variables that appear not to be helpful in predicting seismic hazard, we can obtain a more effective model. After all, using predictors that have no relationship with the response tends to cause a deterioration in the test error rate (since such predictors cause an increase in variance without a corresponding decrease in bias), and so removing such predictors may in turn yield an improvement [straight from the book]
+# Setting Graphics parameters
+par(mfrow=c(1,1))
 
-## Random Notes on Roc Curve
+## Getting data ready to perform pca/indactor matrix
+RawData.train <- seismic.train
+#RawData$seismic <- as.integer(RawData$seismic  == "a")
+#RawData.train <- RawData.train[c(-1,-2,-3,-8,-14,-15,-16)]#getting rid of factor variable for now, nbumps greater than five have almost entirely 0 columns
 
-This type of graph is called a Receiver Operating Characteristic curve (or ROC curve.) It is a plot of the true positive rate against the false positive rate for the different possible cutpoints of a diagnostic test.
+responseY <- RawData.train[16]#selecting our response of interest
+predictorX <- RawData.train[,1:15]
 
-An ROC curve demonstrates several things:
+#running pca
+pc.comp <- princomp(scale(predictorX)) 
 
-It shows the tradeoff between sensitivity and specificity (any increase in sensitivity will be accompanied by a decrease in specificity).  The closer the curve follows the left-hand border and then the top border of the ROC space, the more accurate the test.  The closer the curve comes to the 45-degree diagonal of the ROC space, the less accurate the test.  The slope of the tangent line at a cutpoint gives the likelihood ratio (LR) for that value of the test. You can check this out on the graph above. Recall that the LR for T4 < 5 is 52. This corresponds to the far left, steep portion of the curve. The LR for T4 > 9 is 0.2. This corresponds to the far right, nearly horizontal portion of the curve.  The area under the curve is a measure of text accuracy. This is discussed further in the next section.
+#Creates screeplot to figure out which pc's to include
+screeplot(pc.comp, type="lines")
+pc.comp <- princomp(scale(predictorX))$scores 
 
-The accuracy of the test depends on how well the test separates the group being tested into those with and without the disease in question. Accuracy is measured by the area under the ROC curve. An area of 1 represents a perfect test; an area of .5 represents a worthless test. A rough guide for classifying the accuracy of a diagnostic test is the traditional academic point system:
+## Look at test data performance
+```
 
-.90-1 = excellent (A)
-.80-.90 = good (B)
-.70-.80 = fair (C)
-.60-.70 = poor (D)
-.50-.60 = fail (F)
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+##-----------------------------------------------------
+##  Principle Component Analysis 
+##-----------------------------------------------------
+
+par(mfrow=c(1,1))
+
+#Based on scree plot im going to go with 3 pc scores
+pc.comp1 <- pc.comp[,1] 
+pc.comp2 <- pc.comp[,2] 
+pc.comp3 <- pc.comp[,3] 
+X <- cbind(1,pc.comp1, pc.comp2,pc.comp3)
+
+
+# Following LeBao's code
+class1 <- which(responseY==1) 
+class2 <- which(responseY==0) 
+Y <- matrix(0,dim(responseY)[1],2) 
+Y[class2,1] <- 1 
+Y[class1,2] <- 1
+
+betaHat <- solve(t(X)%*%X)%*%t(X)%*%Y 
+Y1 <- X%*%betaHat[,1] 
+Y2 <- X%*%betaHat[,2]
+
+# Plots the pca scores...doesn't look good.
+plot(pc.comp1[class1],pc.comp2[class1],main="PC1 vs PC2",xlab="pcaComp1",ylab="pcaComp2",col="red") 
+points(pc.comp1[class2],pc.comp2[class2],col="blue")
+
+plot(pc.comp1[class1],pc.comp3[class1],main="PC1 vs PC3",xlab="pcaComp1",ylab="pcaComp2",col="red") 
+points(pc.comp1[class2],pc.comp3[class2],col="blue")
+
+plot(pc.comp2[class1],pc.comp3[class1],main="PC2 vs PC3",xlab="pcaComp1",ylab="pcaComp2",col="red") 
+points(pc.comp2[class2],pc.comp3[class2],col="blue")
+
+
+## Not sure how to figure out misclasssfication rate for Training Date Sets
+## Not sure how to run the Testing Data through the model
+```
+
 
