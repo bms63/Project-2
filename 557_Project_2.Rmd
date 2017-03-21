@@ -8,36 +8,16 @@ output: pdf_document
 # No Command Lines Ever.  Whoa
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-### Testing out Github
+c# Configuring Space
 rm(list=ls())
 par(mfrow=c(1,1))
+
 # Loading packages into R
 library(data.table);library(car);library(lars);library(knitr);library(ISLR);library(leaps);library(glmnet);library(MASS);library(reshape);library(ggplot2)
 
-
+# Loading up files
 setwd("/Users/benStraub/Desktop/557/Project 2")
 seismic <- read.csv("seismic.csv")
-```
-
-# EDA in no particular order of sanity
-
-## Names of Variables
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-# EDA
-names(seismic)
-```
-
-## Summary Statistics
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-summary(seismic)
-```
-
-## Dimensions of Data Matrix
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-dim(seismic)
 ```
 
 ## What the Factor Variables look like
@@ -82,11 +62,10 @@ plot(density(seismic$nbumps4,adjust=10));plot(density(seismic$nbumps5,adjust=10)
 
 ## Normalize things that arent factors
 ## Eliminate data that has no info (some of the nbumps)
-setwd("/Users/benStraub/Desktop/557/Project 2")
-seismic <- read.csv("seismic.csv")
 
 seismic[,c(4:7,9:13,17:18)] <- seismic[,c(4:7,9:13,17:18)]
 seismic <- seismic[,-(14:16)]
+#seismic$class <- as.factor(seismic$class)
 
 for(i in c(1:3,8)){
   seismic[,i] <- as.numeric(seismic[,i])
@@ -124,8 +103,10 @@ vif(fit)
 source("http://www.sthda.com/upload/rquery_cormat.r")
 x <- seismic[c(-1,-2,-3,-8,-14,-15,-16,-19)]
 require("corrplot")
-#rquery.cormat(x, type="flatten", graphType = "heatmap")
+rquery.cormat(x, graphType = "heatmap")
 rquery.cormat(x, type="flatten")
+
+# Not sure how to suppress the the output.  Just want the plot.
 
 #rquery.cormat(x, type="flatten", graph=FALSE)
 ```
@@ -134,7 +115,7 @@ rquery.cormat(x, type="flatten")
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE, comment=NA}
 ##------------------------------------
-## Setting up
+## Setting up Test and Training Sets
 ##------------------------------------
 
 n <- dim(seismic)[1]
@@ -146,6 +127,10 @@ train <- (1:n)[-test]
 seismic.train <- seismic[train,]
 seismic.test <- seismic[test,]
 
+dim(seismic)
+dim(seismic.train)
+dim(seismic.test)
+
 #View(seismic.train)
 #View(seismic.test)
 ```
@@ -153,17 +138,20 @@ seismic.test <- seismic[test,]
 # Linear regression of an indicator matrix
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+##-----------------------------------------------------
+## Linear regression of an indicator matrix Part I (Train)
+##-----------------------------------------------------
+
 # Setting Graphics parameters
 par(mfrow=c(1,1))
 
 ## Getting data ready to perform pca/indactor matrix
-setwd("/Users/benStraub/Desktop/557/Project 2")
-RawData <- read.csv("seismic.csv",sep=",", dec=",")
+RawData.train <- seismic.train
 #RawData$seismic <- as.integer(RawData$seismic  == "a")
-RawData <- RawData[c(-1,-2,-3,-8,-14,-15,-16)]#getting rid of factor variable for now, nbumps greater than five have almost entirely 0 columns
+#RawData.train <- RawData.train[c(-1,-2,-3,-8,-14,-15,-16)]#getting rid of factor variable for now, nbumps greater than five have almost entirely 0 columns
 
-responseY <- RawData[12]#selecting our response of interest
-predictorX <- RawData[,2:11]
+responseY <- RawData.train[16]#selecting our response of interest
+predictorX <- RawData.train[,1:15]
 
 #running pca
 pc.comp <- princomp(scale(predictorX)) 
@@ -177,6 +165,11 @@ pc.comp <- princomp(scale(predictorX))$scores
 ```
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+##-----------------------------------------------------
+## Linear regression of an indicator matrix Part II (Train)
+##-----------------------------------------------------
+
+
 par(mfrow=c(1,1))
 
 #Based on scree plot im going to go with 3 pc scores
@@ -207,6 +200,9 @@ points(pc.comp1[class2],pc.comp3[class2],col="blue")
 plot(pc.comp2[class1],pc.comp3[class1],main="PC2 vs PC3",xlab="pcaComp1",ylab="pcaComp2",col="red") 
 points(pc.comp2[class2],pc.comp3[class2],col="blue")
 
+
+## Not sure how to figure out misclasssfication rate for Training Date Sets
+## Not sure how to run the Testing Data through the model
 ```
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
@@ -336,9 +332,13 @@ ggplot(data = df, aes(x=prob.seq)) +
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
-############# LOGISTIC REGRESSION ###################
+##------------------------------------
+## Logistic Regression (Train)
+##------------------------------------
 
-### Training Set on Logistic Regression
+seismic.train$class <- as.factor(seismic.train$class)
+seismic.test$class <- as.factor(seismic.test$class)
+
 glm.fit=glm(class~., data=seismic.train ,family=binomial)
 summary(glm.fit)
 glm.probs=predict(glm.fit ,type="response")
@@ -348,9 +348,11 @@ glm.probs=predict(glm.fit ,type="response")
 The predictors that are significant in our logistic model are seismic, shift and gpuls.  The predictors nbumps6, nbumps7 and nbumps89 were removed as they did not provide any data.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-### Training Set on Logistic Regression Continued
-#glm.probs[1:10]
-#contrasts(seismic.train$y.train)
+
+##--------------------------------------------
+## Logistic Regression (Train) Confusion\Roc
+##--------------------------------------------
+par(mfrow=c(1,1))
 
 glm.pred=rep("0",1938)
 glm.pred[glm.probs >.5]="1"
@@ -377,19 +379,20 @@ score_data <- data.frame(link=glm.link.scores,
                          class=seismic.test$class,
                          stringsAsFactors=FALSE)
 
+
 #score_data %>% 
-#  ggplot(aes(glm.link.scores=link, y=response, col=class)) + 
+#  ggplot(aes(x=link, y=response, col=class)) + 
 #  scale_color_manual(values=c("black", "red")) + 
 #  geom_point() + 
 #  geom_rug() + 
 #  ggtitle("Both link and response scores put cases in the same order")
 
-library(pROC)
+#plot.roc(roc(seismic.test$class, glm.response.scores, direction="<", auc=TRUE),
+#     col="blue", pch=18,lwd=3, main="ROC Curve", print.thres=TRUE, print.auc=TRUE)
 
-plot(roc(seismic.test$class, glm.response.scores, direction="<"),
-     col="yellow", lwd=3, main="The turtle finds its way")
+tt <- roc(seismic.test$class, glm.response.scores, direction="<")
 
-roc(seismic.test$class, glm.response.scores, direction="<")
+plot.roc(tt, col="blue", auc.polygon=TRUE,main="ROC Curve",print.auc=TRUE)
 
 #simple_roc <- function(labels, scores){
 #  labels <- labels[order(scores, decreasing=TRUE)]
@@ -398,6 +401,7 @@ roc(seismic.test$class, glm.response.scores, direction="<")
 
 #glm_simple_roc <- simple_roc(seismic.test$class=="TRUE", glm.link.scores)
 #with(glm_simple_roc, points(1 - FPR, TPR, col=1 + labels))
+
 ```
 
 The diagonal elements of the confusion matrix indicate correct predictions,
