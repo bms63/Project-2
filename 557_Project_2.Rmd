@@ -350,7 +350,7 @@ The predictors that are significant in our logistic model are seismic, shift and
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
 ##--------------------------------------------
-## Logistic Regression (Train) Confusion\Roc
+## Logistic Regression (TRAIN) Confusion\Roc
 ##--------------------------------------------
 par(mfrow=c(1,1))
 
@@ -359,6 +359,7 @@ glm.pred[glm.probs >.5]="1"
 confusion <- table(glm.pred ,seismic.train$class)
 mean(glm.pred==seismic.train$class)
 
+# Confusion Table
 sensitivity <- confusion[2,2]/sum(confusion[,2])
 specificity <- confusion[1,1]/sum(confusion[,1])
 
@@ -368,39 +369,11 @@ specificity
 
 library(pROC)
 
-fit.glm <- glm(class~., seismic.train, family=binomial(link="logit"))
-
-glm.link.scores <- predict(fit.glm, seismic.test, type="link")
-
-glm.response.scores <- predict(fit.glm, seismic.test, type="response")
-
-score_data <- data.frame(link=glm.link.scores, 
-                         response=glm.response.scores,
-                         class=seismic.test$class,
-                         stringsAsFactors=FALSE)
-
-
-#score_data %>% 
-#  ggplot(aes(x=link, y=response, col=class)) + 
-#  scale_color_manual(values=c("black", "red")) + 
-#  geom_point() + 
-#  geom_rug() + 
-#  ggtitle("Both link and response scores put cases in the same order")
-
-#plot.roc(roc(seismic.test$class, glm.response.scores, direction="<", auc=TRUE),
-#     col="blue", pch=18,lwd=3, main="ROC Curve", print.thres=TRUE, print.auc=TRUE)
-
-tt <- roc(seismic.test$class, glm.response.scores, direction="<")
-
-plot.roc(tt, col="blue", auc.polygon=TRUE,main="ROC Curve",print.auc=TRUE)
-
-#simple_roc <- function(labels, scores){
-#  labels <- labels[order(scores, decreasing=TRUE)]
-#  data.frame(TPR=cumsum(labels)/sum(labels), FPR=cumsum(!labels)/sum(!labels), labels)
-#}
-
-#glm_simple_roc <- simple_roc(seismic.test$class=="TRUE", glm.link.scores)
-#with(glm_simple_roc, points(1 - FPR, TPR, col=1 + labels))
+# Setting up for Roc Curve
+fit.glm.train <- glm(class~., seismic.train, family=binomial(link="logit"))
+glm.link.scores.train <- predict(fit.glm.train, seismic.train, type="link")
+glm.response.scores.train <- predict(fit.glm.train, seismic.train, type="response")
+roc.Train <- roc(seismic.train$class, glm.response.scores.train, direction="<")
 
 ```
 
@@ -408,7 +381,11 @@ The diagonal elements of the confusion matrix indicate correct predictions,
 while the off-diagonals represent incorrect predictions. Hence our model on the training data set correctly predicted that the seismic activity would be of no harzard on 1786 observations and that it would be of hazard on 0 observations, for a total of 1786 + 0 = 1786 correct predictions. The mean() function can be used to compute the fraction of hazards for which the prediction was correct. In this case, logistic regression correctly predicted the class of hazard 92 percent of the time.  The bad part about this 92 percent of the time is that it did not get any of our actual real hazards observations correct!!!
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-### Testing Set on Logistic Regression
+
+##--------------------------------------------
+## Logistic Regression (TEST) Confusion\Roc
+##--------------------------------------------
+
 glm.fit=glm(class~., data=seismic.test ,family=binomial)
 glm.probs=predict(glm.fit, type="response")
 
@@ -417,16 +394,45 @@ glm.pred[glm.probs >.5]="1"
 confusion <- table(glm.pred, seismic.test$class)
 mean(glm.pred==seismic.test$class)
 
+# Confusion Table
 sensitivity <- confusion[2,2]/sum(confusion[,2])
 specificity <- confusion[1,1]/sum(confusion[,1])
 
-## Sensitivity is very bad! Dramatically underpredict 1s
 confusion
 sensitivity
 specificity
+
+# Setting up for Roc Curve
+fit.glm.test <- glm(class~., seismic.test, family=binomial(link="logit"))
+glm.link.scores.test <- predict(fit.glm.test, seismic.test, type="link")
+glm.response.scores.test <- predict(fit.glm.test, seismic.test, type="response")
+roc.Test <- roc(seismic.test$class, glm.response.scores.test, direction="<")
+
+# Plotting Roc Curve
+plot.roc(roc.Train, col="blue", auc.polygon=TRUE,main="ROC Curve", xlab="False Positive Rate", ylab="True Positive Rate")
+legend("bottomright", legend=c("Train", "Test"), col=c("blue", "red"), lwd=2)
+plot.roc(roc.Test, col="red", lty=3, add=TRUE)
+
 ```
 
 The diagonal elements of the confusion matrix indicate correct predictions,
 while the off-diagonals represent incorrect predictions. Hence our model on the testing data set correctly predicted that the seismic activity would be of no harzard on 605 observations and that it would be hazardous on 2 observations, for a total of 602 + 2 = 604 correct predictions. The mean() function can be used to compute the fraction of seismic activity for which the prediction was correct. In this case, logistic regression correctly predicted class of hazard 93.5 % of the time.  However, again worrisome, is that the model miss 5 observations that were hazardous instances and 37 that were not hazardous.
 
 Recall that the logistic regression model had only 3 predictors that were significant from an avaiable 19.  Perhaps by removing the variables that appear not to be helpful in predicting seismic hazard, we can obtain a more effective model. After all, using predictors that have no relationship with the response tends to cause a deterioration in the test error rate (since such predictors cause an increase in variance without a corresponding decrease in bias), and so removing such predictors may in turn yield an improvement [straight from the book]
+
+## Random Notes on Roc Curve
+
+This type of graph is called a Receiver Operating Characteristic curve (or ROC curve.) It is a plot of the true positive rate against the false positive rate for the different possible cutpoints of a diagnostic test.
+
+An ROC curve demonstrates several things:
+
+It shows the tradeoff between sensitivity and specificity (any increase in sensitivity will be accompanied by a decrease in specificity).  The closer the curve follows the left-hand border and then the top border of the ROC space, the more accurate the test.  The closer the curve comes to the 45-degree diagonal of the ROC space, the less accurate the test.  The slope of the tangent line at a cutpoint gives the likelihood ratio (LR) for that value of the test. You can check this out on the graph above. Recall that the LR for T4 < 5 is 52. This corresponds to the far left, steep portion of the curve. The LR for T4 > 9 is 0.2. This corresponds to the far right, nearly horizontal portion of the curve.  The area under the curve is a measure of text accuracy. This is discussed further in the next section.
+
+The accuracy of the test depends on how well the test separates the group being tested into those with and without the disease in question. Accuracy is measured by the area under the ROC curve. An area of 1 represents a perfect test; an area of .5 represents a worthless test. A rough guide for classifying the accuracy of a diagnostic test is the traditional academic point system:
+
+.90-1 = excellent (A)
+.80-.90 = good (B)
+.70-.80 = fair (C)
+.60-.70 = poor (D)
+.50-.60 = fail (F)
+
