@@ -139,43 +139,29 @@ dim(seismic.test)
 # Linear regression of an indicator matrix
 
 ```{r}
-##-------------------------------------------
-## Fit Linear Regression to Indicator Matrix
-##-------------------------------------------
+##----------------------------------------
+## Linear regression of indicator matrix
+##----------------------------------------
 
-fit.lm <- lm(class~., data=seismic.train)
-summary(fit.lm)
-fit.probs <- predict(fit.lm, type="response")
+responseY <- seismic$class
+predictorX <- seismic[,-16]
 
-# Train Data
-fit.pred=rep("0",1938)
-fit.pred[fit.probs >.5]="1"
-confusion <- table(fit.pred ,seismic.train$class)
-mean(fit.pred==seismic.train$class)
+# Following Le Bao's code
+class1 <- which(responseY==1) 
+class0 <- which(responseY==0) 
+Y <- matrix(data = rep(0,length(responseY)*2),nrow = length(responseY)) 
+Y[class0,1] <- 1 
+Y[class1,2] <- 1
 
-sensitivity <- confusion[2,2]/sum(confusion[,2])
-specificity <- confusion[1,1]/sum(confusion[,1])
+betaHat <- solve(t(as.matrix(predictorX))%*%as.matrix(predictorX))%*%t(as.matrix(predictorX))%*%Y
+Y1 <- as.matrix(predictorX)%*%betaHat[,1]
+Y2 <- as.matrix(predictorX)%*%betaHat[,2]
 
-## Sensitivity is very bad! Dramatically underpredict 1s
-confusion
-sensitivity
-specificity
-
-# Test Data
-fit.probs <- predict(fit.lm, newdata=seismic.test, type="response")
-
-fit.pred=rep("0",646)
-fit.pred[fit.probs >.5]="1"
-confusion <- table(fit.pred, seismic.test$class)
-mean(fit.pred==seismic.test$class)
-
-sensitivity <- confusion[2,2]/sum(confusion[,2])
-specificity <- confusion[1,1]/sum(confusion[,1])
-
-## Sensitivity is very bad! Dramatically underpredict 1s
-confusion
-sensitivity
-specificity
+pred.mx <- cbind(Y1,Y2)
+pred <- rep(NA,length(Y1))
+for(i in 1:length(Y1)){
+  pred[i] <- which.max(pred.mx[i,]) - 1
+}
 
 ```
 
