@@ -313,26 +313,6 @@ lines(x=ROC.test[,2],y=ROC.test[,1], ylim = c(0,1), xlim = c(0,1), col = "dark c
 lines(x = ROC.train[,2],y=ROC.train[,1], ylim = c(0,1), xlim = c(0,1))
 lines(x=prob.seq,y=prob.seq)
 
-##------------------------------------
-## Fit QDA model
-##------------------------------------
-
-## Currently, can't perform QDA.  This is probably due to multicollinearity in the model
-## (can't invert covariance matrix) but should be possible after variable selection
-
-#qda.fit <- qda(class~., data = seismic, subset = train)
-
-```
-
-# Regularized Discriminant Analysis
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-
-##--------------------------------------------
-## Regularized Discriminant Analysis
-##--------------------------------------------
-
-
 ```
 
 # Logistic Regression
@@ -556,4 +536,28 @@ roc.Test <- roc(seismic.test$class, glm.probs, direction="<")
 # Plotting Roc Curve for Test Data
 plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve after Variable Selection", xlab="False Positive Rate", ylab="True Positive Rate", print.auc=TRUE)
 plot.roc(roc.Train, add=TRUE)
+```
+
+# Quadratic Discriminant Analysis after variable selection
+```{r}
+##------------------------------------
+## Fit QDA model
+##------------------------------------
+
+## Currently, can't perform QDA.  This is probably due to multicollinearity in the model
+## (can't invert covariance matrix) but should be possible after variable selection
+
+#qda.fit <- qda(class~., data = seismic, subset = train)
+```
+
+
+# Regularized Discriminant Analysis
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+##--------------------------------------------
+## Regularized Discriminant Analysis
+##--------------------------------------------
+
+
 ```
