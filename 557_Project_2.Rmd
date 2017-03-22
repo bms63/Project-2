@@ -180,7 +180,7 @@ error.rate <- (confusion[1,2] + confusion[2,1])/sum(confusion)
 c(sensitivity, specificity, error.rate)
 
 ```
-
+# Linear Discriminant Analysis on full model
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ##------------------------------------
 ## Fit LDA model
