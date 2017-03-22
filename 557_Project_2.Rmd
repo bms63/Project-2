@@ -13,7 +13,7 @@ rm(list=ls())
 
 # Loading packages into R
 library(data.table);library(car);library(lars);library(knitr);library(ISLR);library(leaps);library(glmnet);library(MASS);library(reshape);library(ggplot2);library(pROC)
-
+library(klaR)
 
 # Loading up files
 setwd("/Users/benStraub/Desktop/557/Project 2")
@@ -299,7 +299,18 @@ ggplot(data = df, aes(x=prob.seq)) +
 
 ```
 
-# Logistic Regression on the Training and Test Sets
+# Regularized Discriminant Analysis
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+##--------------------------------------------
+## Regularized Discriminant Analysis
+##--------------------------------------------
+
+
+```
+
+# Logistic Regression
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
@@ -316,7 +327,7 @@ summary(glm.train)
 glm.probs=predict(glm.train, type="response")
 
 glm.pred=rep("0",1938)
-glm.pred[glm.probs >.3]="1"
+glm.pred[glm.probs >.5]="1"
 confusion <- table(glm.pred ,seismic.train$class)
 mean(glm.pred==seismic.train$class)
 
@@ -334,7 +345,7 @@ specificity
 glm.probs=predict(glm.train, seismic.test, type="response")
 
 glm.pred=rep("0",646)
-glm.pred[glm.probs >.3]="1"
+glm.pred[glm.probs >.5]="1"
 confusion <- table(glm.pred, seismic.test$class)
 mean(glm.pred==seismic.test$class)
 
@@ -353,6 +364,45 @@ plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve", xlab="False Po
 plot.roc(roc.Train, add=TRUE)
 ```
 
+# Variable Selection
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+##-----------------------------------------------------
+## LASSO 
+##-----------------------------------------------------
+
+# Setting up Train and Test
+grid=10^seq(10,-2,length=100)
+X.train=seismic.train[-16]
+X.train=as.matrix(X.train)
+y.train=seismic.train$class
+X.test = seismic.test[-16]
+X.test = as.matrix(X.test)
+y.test = seismic.test$class
+
+# Running on Train set
+lasso.mod=glmnet(X.train,y.train,alpha=1,lambda=grid, family = "binomial")
+
+
+plot(lasso.mod,xvar="lambda",label=TRUE) 
+
+# Using CV to find lambda
+set.seed(1)
+cv.out=cv.glmnet(X.train,y.train,alpha=1)
+plot(cv.out,xvar="lambda",label=TRUE) 
+
+# Running on Test set using CV lambda
+bestlam=cv.out$lambda.min
+lasso.pred=predict(lasso.mod,s=bestlam,newx=X.test)
+mean((lasso.pred-y.test)^2)
+out=glmnet(X.train,y.train,alpha=1,lambda=grid)
+lasso.coef=predict(out,type="coefficients",s=bestlam)[1:16,]
+lasso.coef
+lasso.coef[lasso.coef!=0]
+
+
+```
+
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ##-----------------------------------------------------
 ## Principle Component Analysis 
@@ -363,8 +413,6 @@ par(mfrow=c(1,1))
 
 ## Getting data ready to perform pca/indactor matrix
 RawData.train <- seismic.train
-#RawData$seismic <- as.integer(RawData$seismic  == "a")
-#RawData.train <- RawData.train[c(-1,-2,-3,-8,-14,-15,-16)]#getting rid of factor variable for now, nbumps greater than five have almost entirely 0 columns
 
 responseY <- RawData.train[16]#selecting our response of interest
 predictorX <- RawData.train[,1:15]
@@ -414,9 +462,73 @@ points(pc.comp1[class2],pc.comp3[class2],col="blue")
 plot(pc.comp2[class1],pc.comp3[class1],main="PC2 vs PC3",xlab="pcaComp1",ylab="pcaComp2",col="red") 
 points(pc.comp2[class2],pc.comp3[class2],col="blue")
 
+library(pls)
+set.seed(2)
+pcr.fit=pcr(class~., data=seismic,scale=TRUE,validation="CV")
+summary(pcr.fit)
+validationplot(pcr.fit,val.type="MSEP")
+set.seed(1)
+pcr.fit=pcr(class~., data=seismic,subset=train,scale=TRUE, validation="CV")
+validationplot(pcr.fit,val.type="MSEP")
+pcr.pred=predict(pcr.fit,seismic.test,ncomp=7)
+mean((pcr.pred-seismic.test$class)^2)
+#pcr.fit=pcr(y~x,scale=TRUE,ncomp=7)
+#summary(pcr.fit)
 
 ## Not sure how to figure out misclasssfication rate for Training Date Sets
 ## Not sure how to run the Testing Data through the model
 ```
 
+# Logistic Regression after Variable Selection
 
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+##--------------------------------------------
+## Logistic Regression  after Variable Selection
+##--------------------------------------------
+
+# Model fitted to Training Data
+glm.train <- glm(class~seismic+shift+gpuls+nbumps, seismic.train, family=binomial)
+
+# Model Summary
+summary(glm.train)
+
+glm.probs=predict(glm.train, type="response")
+
+glm.pred=rep("0",1938)
+glm.pred[glm.probs >.5]="1"
+confusion <- table(glm.pred ,seismic.train$class)
+mean(glm.pred==seismic.train$class)
+
+roc.Train <- roc(seismic.train$class, glm.probs, direction = "<")
+
+# Confusion Table
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion
+sensitivity
+specificity
+
+# Using Training model on Test Data
+glm.probs=predict(glm.train, seismic.test, type="response")
+
+glm.pred=rep("0",646)
+glm.pred[glm.probs >.5]="1"
+confusion <- table(glm.pred, seismic.test$class)
+mean(glm.pred==seismic.test$class)
+
+# Confusion Table
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion
+sensitivity
+specificity
+
+roc.Test <- roc(seismic.test$class, glm.probs, direction="<")
+
+# Plotting Roc Curve for Test Data
+plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve after Variable Selection", xlab="False Positive Rate", ylab="True Positive Rate", print.auc=TRUE)
+plot.roc(roc.Train, add=TRUE)
+```
