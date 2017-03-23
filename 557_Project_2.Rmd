@@ -105,11 +105,9 @@ source("http://www.sthda.com/upload/rquery_cormat.r")
 x <- seismic[c(-1,-2,-3,-8,-14,-15,-16,-19)]
 require("corrplot")
 rquery.cormat(x, graphType = "heatmap")
-rquery.cormat(x, type="flatten")
+#rquery.cormat(x, type="flatten")
 
 # Not sure how to suppress the the output.  Just want the plot.
-
-#rquery.cormat(x, type="flatten", graph=FALSE)
 ```
 
 # Separating into Test and Training Sets
@@ -180,8 +178,10 @@ error.rate <- (confusion[1,2] + confusion[2,1])/sum(confusion)
 c(sensitivity, specificity, error.rate)
 
 ```
+
 # Linear Discriminant Analysis on full model
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ##------------------------------------
 ## Fit LDA model
 ##------------------------------------
@@ -268,7 +268,7 @@ confusion <- table(lda.class.test,seismic.test$class)
 sensitivity <- confusion[2,2]/sum(confusion[,2])
 specificity <- confusion[1,1]/sum(confusion[,1])
 
-## Sensitivity is slightly worse here
+# Sensitivity is slightly worse here
 confusion
 sensitivity
 specificity
@@ -313,6 +313,30 @@ lines(x=ROC.test[,2],y=ROC.test[,1], ylim = c(0,1), xlim = c(0,1), col = "dark c
 lines(x = ROC.train[,2],y=ROC.train[,1], ylim = c(0,1), xlim = c(0,1))
 lines(x=prob.seq,y=prob.seq)
 
+```
+
+# Quadratic Discriminant Analysis -INCOMPLETE
+
+```{r}
+##------------------------------------
+## Fit QDA model
+##------------------------------------
+
+## Currently, can't perform QDA.  This is probably due to multicollinearity in the model
+## (can't invert covariance matrix) but should be possible after variable selection
+
+#qda.fit <- qda(class~., data = seismic, subset = train)
+```
+
+# Regularized Discriminant Analysis -INCOMPLETE
+
+```{r}
+##------------------------------------
+## Fit RDA model
+##------------------------------------
+
+## Currently, can't perform RDA.  This is probably due to multicollinearity in the model
+## (can't invert covariance matrix) but should be possible after variable selection
 ```
 
 # Logistic Regression
@@ -369,7 +393,7 @@ plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve", xlab="False Po
 plot.roc(roc.Train, add=TRUE)
 ```
 
-# Variable Selection
+# Variable Selection-LASSO
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ##-----------------------------------------------------
@@ -403,10 +427,60 @@ mean((lasso.pred-y.test)^2)
 out=glmnet(X.train,y.train,alpha=1,lambda=grid)
 lasso.coef=predict(out,type="coefficients",s=bestlam)[1:16,]
 lasso.coef
+
+```
+
+# Variables selected through LASSO
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
 lasso.coef[lasso.coef!=0]
+
+```
+
+# Principal Component Analysis from the Book - INCOMPLETE
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+par(mfrow=c(2,2))
+
+pr.out=prcomp(seismic, scale=TRUE)
+
+vars <- names(seismic)
+
+Cols=function(vec){
+    cols=rainbow(length(unique(vec)))
+    return(cols[as.numeric(as.factor(vec))])
+}
+
+par(mfrow=c(2,2))
+plot(pr.out$x[,1:2], col=Cols(vars), pch=19,xlab="Z1",ylab="Z2")
+plot(pr.out$x[,c(1,3)], col=Cols(vars), pch=19,xlab="Z1",ylab="Z3")
+summary(pr.out)
+plot(pr.out)
+pve=100*pr.out$sdev^2/sum(pr.out$sdev^2)
+par(mfrow=c(1,2))
+plot(pve,  type="o", ylab="PVE", xlab="Principal Component", col="blue")
+plot(cumsum(pve), type="o", ylab="Cumulative PVE", xlab="Principal Component", col="brown3")
+
+library(pls)
+set.seed(2)
+pcr.fit=pcr(class~., data=seismic,scale=TRUE,validation="CV")
+summary(pcr.fit)
+validationplot(pcr.fit,val.type="MSEP")
+set.seed(1)
+pcr.fit=pcr(class~., data=seismic,subset=train,scale=TRUE, validation="CV")
+validationplot(pcr.fit,val.type="MSEP")
+pcr.pred=predict(pcr.fit,seismic.test,ncomp=7)
+mean((pcr.pred-seismic.test$class)^2)
+#pcr.fit=pcr(class~.,scale=TRUE,ncomp=7)
+
+summary(pcr.fit)
 
 
 ```
+
+# Variable Selection - PCA - INCOMPLETE
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ##-----------------------------------------------------
@@ -431,6 +505,8 @@ pc.comp <- princomp(scale(predictorX))$scores
 
 ## Look at test data performance
 ```
+
+# Variable Selection - PCA - INCOMPLETE
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ##-----------------------------------------------------
@@ -539,25 +615,77 @@ plot.roc(roc.Train, add=TRUE)
 ```
 
 # Quadratic Discriminant Analysis after variable selection
+
 ```{r}
-##------------------------------------
-## Fit QDA model
-##------------------------------------
+##-----------------------------------------
+## Fit QDA model after variable selection
+##-----------------------------------------
 
-## Currently, can't perform QDA.  This is probably due to multicollinearity in the model
-## (can't invert covariance matrix) but should be possible after variable selection
+# Model 1
+qda.fit <- qda(class~seismic+shift+gpuls+nbumps, data=seismic.train)
+qda.class=predict(qda.fit,seismic.test)$class
+confusion <- table(qda.class ,seismic.test$class)
 
-#qda.fit <- qda(class~., data = seismic, subset = train)
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion
+sensitivity
+specificity
+
+# Model 2
+qda.fit <- qda(class ~ genergy + gpuls + nbumps + nbumps2 + nbumps4, data=seismic.train)
+qda.class=predict(qda.fit,seismic.test)$class
+
+confusion <- table(qda.class ,seismic.test$class)
+
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion
+sensitivity
+specificity
+
 ```
 
 
-# Regularized Discriminant Analysis
+# Regularized Discriminant Analysis after variable selection
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
-##--------------------------------------------
-## Regularized Discriminant Analysis
-##--------------------------------------------
+##------------------------------------------------------------
+## Regularized Discriminant Analysis after variable selection
+##------------------------------------------------------------
 
+# Model 1
+
+rda.fit <- rda(class~seismic+shift+gpuls+nbumps, data = seismic.train, gamma = 0.05, lambda = 0.2)
+
+rda.class=predict(rda.fit,seismic.test)$class
+
+confusion <- table(rda.class ,seismic.test$class)
+
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion
+sensitivity
+specificity
+
+# Model 2
+
+rda.fit <- rda(class~genergy + gpuls + nbumps + nbumps2 + nbumps4, data = seismic.train, gamma = 1, lambda = 1)
+
+rda.class=predict(rda.fit,seismic.test)$class
+
+confusion <- table(rda.class ,seismic.test$class)
+
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion
+sensitivity
+specificity
 
 ```
+
