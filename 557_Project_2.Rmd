@@ -337,9 +337,29 @@ lines(x=prob.seq,y=prob.seq)
 
 ## Currently, can't perform RDA.  This is probably due to multicollinearity in the model
 ## (can't invert covariance matrix) but should be possible after variable selection
+
+rda.fit <- rda(class~., data=seismic.train)
+
+# Using Training model on train Data
+rda.pred=predict(rda.fit, seismic.train, type="response")
+
+rda.class.train <- rda.pred$class
+
+posterior.train <- rda.pred$posterior
+truth.train <- as.integer(seismic.train$class)
+
+## Confusion matrix
+rda.train.confusion <- table(rda.class.train,seismic.train$class)
+rda.train.sensitivity <- rda.train.confusion[2,2]/sum(rda.train.confusion[,2])
+rda.train.specificity <- rda.train.confusion[1,1]/sum(rda.train.confusion[,1])
+
+# Sensitivity is slightly worse here
+rda.train.confusion
+rda.train.sensitivity
+rda.train.specificity
 ```
 
-# Logistic Regression
+# Logistic Regression.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
@@ -689,3 +709,22 @@ specificity
 
 ```
 
+## Pre-Variable Selection
+
+ | Model | Test Specificity | Test Sensitivity | Training Specificity | Training Sensitivity |
+| ------------------------- | ----------|------------|-------:|:------:|
+| Indicator  | 123  | 123  | 123 |  123 |
+| LDA | 123 | 123 | 123 | 123 |
+| QDA  | 123 | 123 | 123 | 123 |
+| RDA  | 123 | 123 | 123 | 123 |
+| Log Regression  | 123 | 123 | 123 | 123 |
+
+## Post-Variable Selection
+
+ | Model | Test Specificity | Test Sensitivity | Training Specificity | Training Sensitivity |
+| ------------------------- | ----------|------------|-------:|:------:|
+| Indicator  | 123  | 123  | 123 |  123 |
+| LDA | 123 | 123 | 123 | 123 |
+| QDA  | 123 | 123 | 123 | 123 |
+| RDA  | 123 | 123 | 123 | 123 |
+| Log Regression  | 123 | 123 | 123 | 123 |
