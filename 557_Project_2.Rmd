@@ -22,7 +22,7 @@ seismic <- read.csv("seismic.csv")
 
 ## What the Factor Variables look like
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 par(mfrow=c(2,2))
 
 # Barplots of Factor Variables
@@ -48,14 +48,12 @@ par(mfrow=c(2,2))
 ## Looking at condtl distb within class
 ## Have a look at the densities
 
-plot(density(seismic$genergy));plot(density(seismic$gpuls))
-
+#plot(density(seismic$genergy));plot(density(seismic$gpuls))
 #plot(density(log(seismic$genergy)));plot(density(log(seismic$gpuls)))
-
-plot(density(seismic$gdenergy));plot(density(seismic$gdpuls))
-plot(density(seismic$maxenergy));plot(density(seismic$nbumps, adjust=10))
-plot(density(seismic$nbumps2,adjust=10));plot(density(seismic$nbumps3,adjust=10))
-plot(density(seismic$nbumps4,adjust=10));plot(density(seismic$nbumps5,adjust=10))
+#plot(density(seismic$gdenergy));plot(density(seismic$gdpuls))
+#plot(density(seismic$maxenergy));plot(density(seismic$nbumps, adjust=10))
+#plot(density(seismic$nbumps2,adjust=10));plot(density(seismic$nbumps3,adjust=10))
+#plot(density(seismic$nbumps4,adjust=10));plot(density(seismic$nbumps5,adjust=10))
 
 ##---------------------------------------------
 ## Some quick EDA from Hillary
@@ -95,17 +93,18 @@ hist(res, xlab = "Residuals")
 
 ```{r}
 vif(fit)
+sqrt(vif(fit)) > 2
 ```
 
 # Correlation of the Variables 
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, cache=TRUE}
+```{r, eval=FALSE,echo=FALSE, warning=FALSE, message=FALSE, comment=NA, cache=TRUE}
 # Correlation Plot of the data...7 variables removed
 source("http://www.sthda.com/upload/rquery_cormat.r")
 x <- seismic[c(-1,-2,-3,-8,-14,-15,-16,-19)]
 require("corrplot")
+rquery.cormat(seismic, graphType = "heatmap")
 rquery.cormat(x, graphType = "heatmap")
-#rquery.cormat(x, type="flatten")
 
 # Not sure how to suppress the the output.  Just want the plot.
 ```
@@ -181,10 +180,12 @@ c(sensitivity, specificity, error.rate)
 
 # Linear Discriminant Analysis on full model
 
-```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ##------------------------------------
 ## Fit LDA model
 ##------------------------------------
+
+par(mfrow=c(1,2))
 
 lda.fit <- lda(class~., data = seismic, subset = train)
 
@@ -251,14 +252,12 @@ ggplot(data = df1, aes(x=prob.seq)) +
   geom_line(aes(y = Error.rate, colour = "Error rate")) +
   scale_colour_manual(values=c("dark cyan", "dark grey"))
   
-
-
 ##
 ## Now try on test data
 ##
 
 lda.pred.test <- predict(lda.fit, seismic.test)
-lda.class.test <- lda.pred$class
+lda.class.test <- lda.pred.test$class
 
 posterior.test <- lda.pred$posterior
 truth.test <- seismic.test$class
@@ -338,25 +337,133 @@ lines(x=prob.seq,y=prob.seq)
 ## Currently, can't perform RDA.  This is probably due to multicollinearity in the model
 ## (can't invert covariance matrix) but should be possible after variable selection
 
-rda.fit <- rda(class~., data=seismic.train)
+par(mfrow=c(1,2))
 
-# Using Training model on train Data
+rda.fit <- rda(class~., data=seismic.train)
+rda.fit
+
+##
+# Using  model on TRAIN Data
+##
 rda.pred=predict(rda.fit, seismic.train, type="response")
 
 rda.class.train <- rda.pred$class
 
 posterior.train <- rda.pred$posterior
-truth.train <- as.integer(seismic.train$class)
+truth.train <- seismic.train$class
 
 ## Confusion matrix
 rda.train.confusion <- table(rda.class.train,seismic.train$class)
 rda.train.sensitivity <- rda.train.confusion[2,2]/sum(rda.train.confusion[,2])
 rda.train.specificity <- rda.train.confusion[1,1]/sum(rda.train.confusion[,1])
 
-# Sensitivity is slightly worse here
+# Sensitivity, Specificity and Confusion
 rda.train.confusion
 rda.train.sensitivity
 rda.train.specificity
+
+mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
+  idx0 <- which(posterior[,1] > prob)
+  idx1 <- (1:dimension)[-idx0]
+  
+  prediction <- rep(NA,dimension)
+  prediction[idx0] = 0
+  prediction[idx1] = 1
+  
+  mx <- cbind(prediction,truth,prediction-truth)
+  
+  rda.train.confusion <- matrix(rep(NA,4), nrow = 2)
+  correct <- which(mx[,3] == 0)
+  rda.train.confusion[1,1] <- length(which(mx[correct,1] == 0))
+  rda.train.confusion[2,2] <- length(which(mx[correct,1] == 1))
+  rda.train.confusion[1,2] <- length(which(mx[,3] == -1))
+  rda.train.confusion[2,1] <- length(which(mx[,3] == 1))
+  
+  sensitivity <- rda.train.confusion[2,2]/sum(rda.train.confusion[,2])
+  specificity <- rda.train.confusion[1,1]/sum(rda.train.confusion[,1])
+  error.rate <- (rda.train.confusion[1,2] + rda.train.confusion[2,1])/sum(rda.train.confusion)
+  c(sensitivity, specificity, error.rate)
+}
+
+posterior.train <- rda.pred$posterior
+truth.train <- seismic.train$class
+
+prob.seq <- seq(.5,.98,by = .02)
+output.train <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
+colnames(output.train) <- c("Sensitivity", "Error.rate")
+
+for(i in 1:length(prob.seq)){
+  output.train[i,] <- mod.posterior(posterior.train,truth.train,prob.seq[i])[c(1,3)]
+}
+
+df1 <- as.data.frame(cbind(prob.seq,output.train))
+
+ggplot(data = df1, aes(x=prob.seq)) +
+  geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
+  geom_line(aes(y = Error.rate, colour = "Error rate")) +
+  scale_colour_manual(values=c("dark cyan", "dark grey"))
+
+## 
+# Using model on TEST Data
+##
+rda.pred=predict(rda.fit, seismic.test, type="response")
+
+rda.class.test <- rda.pred$class
+
+## Confusion matrix
+rda.test.confusion <- table(rda.class.test,seismic.test$class)
+rda.test.sensitivity <- rda.test.confusion[2,2]/sum(rda.test.confusion[,2])
+rda.test.specificity <- rda.test.confusion[1,1]/sum(rda.test.confusion[,1])
+
+mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
+  idx0 <- which(posterior[,1] > prob)
+  idx1 <- (1:dimension)[-idx0]
+  
+  prediction <- rep(NA,dimension)
+  prediction[idx0] = 0
+  prediction[idx1] = 1
+  
+  mx <- cbind(prediction,truth,prediction-truth)
+  
+  rda.test.confusion <- matrix(rep(NA,4), nrow = 2)
+  correct <- which(mx[,3] == 0)
+  rda.test.confusion[1,1] <- length(which(mx[correct,1] == 0))
+  rda.test.confusion[2,2] <- length(which(mx[correct,1] == 1))
+  rda.test.confusion[1,2] <- length(which(mx[,3] == -1))
+  rda.test.confusion[2,1] <- length(which(mx[,3] == 1))
+  
+  sensitivity <- rda.test.confusion[2,2]/sum(rda.test.confusion[,2])
+  specificity <- rda.test.confusion[1,1]/sum(rda.test.confusion[,1])
+  error.rate <- (rda.test.confusion[1,2] + rda.test.confusion[2,1])/sum(rda.test.confusion)
+  c(sensitivity, specificity, error.rate)
+}
+
+posterior.train <- rda.pred$posterior
+truth.train <- seismic.train$class
+
+prob.seq <- seq(.5,.98,by = .02)
+output.train <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
+colnames(output.train) <- c("Sensitivity", "Error.rate")
+
+for(i in 1:length(prob.seq)){
+  output.train[i,] <- mod.posterior(posterior.train,truth.train,prob.seq[i])[c(1,3)]
+}
+
+df1 <- as.data.frame(cbind(prob.seq,output.train))
+
+ggplot(data = df1, aes(x=prob.seq)) +
+  geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
+  geom_line(aes(y = Error.rate, colour = "Error rate")) +
+  scale_colour_manual(values=c("dark cyan", "dark grey"))
+
+# Sensitivity, Specificity and Confusion
+rda.test.confusion
+rda.test.sensitivity
+rda.test.specificity
+
+sum(rda.pred$posterior[,1]>=.5)
+sum(rda.pred$posterior[,1]<.5)
+
 ```
 
 # Logistic Regression.
@@ -367,7 +474,9 @@ rda.train.specificity
 ## Logistic Regression  Confusion\Roc
 ##--------------------------------------------
 
-# Model fitted to Training Data
+##
+# Model fitted to TRAINING Data
+##
 glm.train <- glm(class~., seismic.train, family=binomial)
 
 # Model Summary
@@ -390,7 +499,9 @@ confusion
 sensitivity
 specificity
 
-# Using Training model on Test Data
+##
+# Using model on TEST Data
+##
 glm.probs=predict(glm.train, seismic.test, type="response")
 
 glm.pred=rep("0",646)
@@ -432,7 +543,6 @@ y.test = seismic.test$class
 # Running on Train set
 lasso.mod=glmnet(X.train,y.train,alpha=1,lambda=grid, family = "binomial")
 
-
 plot(lasso.mod,xvar="lambda",label=TRUE) 
 
 # Using CV to find lambda
@@ -446,15 +556,18 @@ lasso.pred=predict(lasso.mod,s=bestlam,newx=X.test)
 mean((lasso.pred-y.test)^2)
 out=glmnet(X.train,y.train,alpha=1,lambda=grid)
 lasso.coef=predict(out,type="coefficients",s=bestlam)[1:16,]
-lasso.coef
+
+lasso.table <- round(lasso.coef[lasso.coef!=0],5)
+lasso.table <- (as.data.frame(t(lasso.table)))
 
 ```
 
 # Variables selected through LASSO
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+```{r,echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
-lasso.coef[lasso.coef!=0]
+# kable(lasso.table, caption="Predictors through LASSO")
+lasso.table
 
 ```
 
@@ -462,9 +575,22 @@ lasso.coef[lasso.coef!=0]
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
-par(mfrow=c(2,2))
+library(pls)
+set.seed(2)
+pcr.fit=pcr(class~., data=seismic ,scale=TRUE,validation ="CV")
+summary(pcr.fit)
 
-pr.out=prcomp(seismic, scale=TRUE)
+validationplot(pcr.fit,val.type="MSEP")
+
+set.seed(1)
+pcr.fit=pcr(class~., data=seismic,subset=train,scale=TRUE,
+validation ="CV")
+validationplot(pcr.fit,val.type="MSEP")
+#pcr.pred=predict(pcr.fit,x[test,],ncomp=7)
+
+par(mfrow=c(1,2))
+
+pr.out=prcomp(seismic, validation ="CV", scale=TRUE)
 
 vars <- names(seismic)
 
@@ -473,13 +599,11 @@ Cols=function(vec){
     return(cols[as.numeric(as.factor(vec))])
 }
 
-par(mfrow=c(2,2))
 plot(pr.out$x[,1:2], col=Cols(vars), pch=19,xlab="Z1",ylab="Z2")
 plot(pr.out$x[,c(1,3)], col=Cols(vars), pch=19,xlab="Z1",ylab="Z3")
 summary(pr.out)
 plot(pr.out)
 pve=100*pr.out$sdev^2/sum(pr.out$sdev^2)
-par(mfrow=c(1,2))
 plot(pve,  type="o", ylab="PVE", xlab="Principal Component", col="blue")
 plot(cumsum(pve), type="o", ylab="Cumulative PVE", xlab="Principal Component", col="brown3")
 
