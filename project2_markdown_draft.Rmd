@@ -17,7 +17,8 @@ rm(list=ls())
 
 # Loading packages into R
 library(data.table);library(car);library(lars);library(knitr);library(ISLR);library(leaps);library(glmnet);library(MASS);library(reshape);library(ggplot2);library(pROC)
-library(klaR)
+library(klaR);library(gridExtra)
+
 
 #setwd("~/Box Sync/Skool/Spring 2017/557/Project-2-master")
 setwd("/Users/benStraub/Desktop/557/Project 2")
@@ -157,18 +158,18 @@ for(i in 1:length(Y1.train)){
 
 mx <- cbind(pred,responseY.train,pred-responseY.train)
 
-confusion <- matrix(rep(NA,4), nrow = 2)
+confusion1 <- matrix(rep(NA,4), nrow = 2)
 correct <- which(mx[,3] == 0)
-confusion[1,1] <- length(which(mx[correct,1] == 0))
-confusion[2,2] <- length(which(mx[correct,1] == 1))
-confusion[1,2] <- length(which(mx[,3] == -1))
-confusion[2,1] <- length(which(mx[,3] == 1))
-confusion
+confusion1[1,1] <- length(which(mx[correct,1] == 0))
+confusion1[2,2] <- length(which(mx[correct,1] == 1))
+confusion1[1,2] <- length(which(mx[,3] == -1))
+confusion1[2,1] <- length(which(mx[,3] == 1))
 
-sensitivity <- confusion[2,2]/sum(confusion[,2])
-specificity <- confusion[1,1]/sum(confusion[,1])
-error.rate <- (confusion[1,2] + confusion[2,1])/sum(confusion)
-c(sensitivity, specificity, error.rate)
+
+sensitivity <- confusion1[2,2]/sum(confusion1[,2])
+specificity <- confusion1[1,1]/sum(confusion1[,1])
+error.rate <- (confusion1[1,2] + confusion1[2,1])/sum(confusion1)
+#c(sensitivity, specificity, error.rate)
 
 # Get same results on test set
 class1.test <- which(responseY.test==1) 
@@ -188,27 +189,34 @@ for(i in 1:length(Y1.test)){
 
 mx <- cbind(pred,responseY.test,pred-responseY.test)
 
-confusion <- matrix(rep(NA,4), nrow = 2)
+confusion2 <- matrix(rep(NA,4), nrow = 2)
 correct <- which(mx[,3] == 0)
-confusion[1,1] <- length(which(mx[correct,1] == 0))
-confusion[2,2] <- length(which(mx[correct,1] == 1))
-confusion[1,2] <- length(which(mx[,3] == -1))
-confusion[2,1] <- length(which(mx[,3] == 1))
-confusion
+confusion2[1,1] <- length(which(mx[correct,1] == 0))
+confusion2[2,2] <- length(which(mx[correct,1] == 1))
+confusion2[1,2] <- length(which(mx[,3] == -1))
+confusion2[2,1] <- length(which(mx[,3] == 1))
+#confusion
 
-sensitivity <- confusion[2,2]/sum(confusion[,2])
-specificity <- confusion[1,1]/sum(confusion[,1])
-error.rate <- (confusion[1,2] + confusion[2,1])/sum(confusion)
-c(sensitivity, specificity, error.rate)
+sensitivity <- confusion2[2,2]/sum(confusion2[,2])
+specificity <- confusion2[1,1]/sum(confusion2[,1])
+error.rate <- (confusion2[1,2] + confusion2[2,1])/sum(confusion2)
+#c(sensitivity, specificity, error.rate)
+
+super <- as.table(cbind(confusion1,confusion2))
+kable(super, caption="Training vs Test")
+
 ```
 
 ## Logistic Regression:   
  
 We first fit a logistic regression model to predict "class" using all the predictors in the training dataset. It appeasers that seismic, shift, and gpuls have positive coefficients and statistically significant p-values. Therefore, seismic, shift, gpuls have clear positive association with the hazardous/non-hazardous seismic activity. Then we compute the probabilities for the training observations to predict which observations correspond to the hazardous or non-hazardous seismic activity. For that, we used a threshold probability of 0.5. The confusion matrix on training data shows that while this logistic model slightly outperformed LDA (training) model in terms of overall error rate (6.7%), it has substantially lower sensitivity (4.6%) than that of LDA (17.6%). Our fitted logistic model on the training dataset has even poorer performance (see Figure 4) in making  prediction on the test dataset (overall error rate: 6.6%; sensitivity: 0%,; specificity: 100%).  
 
-```{r, echo = F, message = F, fig.height = 4}
-library(pROC)
-library(glmnet)
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, fig.align='left'}
+
+##--------------------------------------------
+## Logistic Regression  Confusion\Roc
+##--------------------------------------------
+
 glm.train <- glm(class~., seismic.train, family=binomial)
 #summary(glm.train)
 
@@ -216,15 +224,15 @@ glm.probs=predict(glm.train, type="response")
 glm.pred=rep("0",1938)
 glm.pred[glm.probs >.5]="1"
 
-confusion <- table(glm.pred ,seismic.train$class)
-mean(glm.pred==seismic.train$class)
+confusion1 <- table(glm.pred ,seismic.train$class)
+#mean(glm.pred==seismic.train$class)
 
 roc.Train <- roc(seismic.train$class, glm.probs, direction = "<")
 
-sensitivity <- confusion[2,2]/sum(confusion[,2])
-specificity <- confusion[1,1]/sum(confusion[,1])
+sensitivity <- confusion1[2,2]/sum(confusion1[,2])
+specificity <- confusion1[1,1]/sum(confusion1[,1])
 
-confusion
+#confusion1
 #sensitivity
 #specificity
 
@@ -232,15 +240,18 @@ glm.probs=predict(glm.train, seismic.test, type="response")
 
 glm.pred=rep("0",646)
 glm.pred[glm.probs >.5]="1"
-confusion <- table(glm.pred, seismic.test$class)
-mean(glm.pred==seismic.test$class)
+confusion2 <- table(glm.pred, seismic.test$class)
+#mean(glm.pred==seismic.test$class)
 
-sensitivity <- confusion[2,2]/sum(confusion[,2])
-specificity <- confusion[1,1]/sum(confusion[,1])
+sensitivity <- confusion2[2,2]/sum(confusion2[,2])
+specificity <- confusion2[1,1]/sum(confusion2[,1])
 
-confusion
+#confusion2
 #sensitivity
 #specificity
+
+super <- cbind(confusion1,confusion2)
+kable(super, caption="Training vs Test")
 
 roc.Test <- roc(seismic.test$class, glm.probs, direction="<")
 par(mfrow = c(2,2))
@@ -254,10 +265,8 @@ We perform LDA on both training and test datasets. First we fit a LDA model usin
 
 The confusion matrices obtained from training and test data show slightly different outputs in terms of sensitivity, specificity, and overall error rate (see Figure 2 and 3). It appears that training dataset produced slightly improved LDA model (overall error rate: 7.4%; sensitivity: 17.6%; specificity: 98%) than that of the test dataset (error rate: 7.8%; sensitivity: 12.8%; specificity: 97%).
 
-```{r, echo = F}
-library(MASS)
-library(ggplot2)
-library(gridExtra)
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
 
 lda.fit <- lda(class~., data = seismic, subset = train)
 lda.pred <- predict(lda.fit, seismic.train)
@@ -267,7 +276,8 @@ confusion <- table(lda.class.train,seismic.train$class)
 sensitivity <- confusion[2,2]/sum(confusion[,2])
 specificity <- confusion[1,1]/sum(confusion[,1])
 
-confusion
+confusion1 <- confusion
+
 #sensitivity
 #specificity
 
@@ -299,7 +309,7 @@ confusion <- table(lda.class.test,seismic.test$class)
 sensitivity <- confusion[2,2]/sum(confusion[,2])
 specificity <- confusion[1,1]/sum(confusion[,1])
 
-confusion
+confusion2 <- confusion
 #sensitivity
 #specificity
 
@@ -339,10 +349,13 @@ colnames(df4) <- c('Sensitivity', '1-Specificity')
 plot4 <- ggplot(data = df4, aes(x=df4$`1-Specificity`)) +
   geom_line(aes(y = df4$Sensitivity, colour = "Sensitivity"), linetype = "dashed")
 
+super <- cbind(confusion1,confusion2)
+kable(super, caption="Training vs Test")
+
 grid.arrange(plot1, plot2, plot3, plot4, ncol=2)
 ```
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 
 grid=10^seq(10,-2,length=100)
 X.train=seismic.train[-16]
@@ -378,6 +391,7 @@ lasso.table
  
 ## Stepwise Variable Selection
 We use forward and backward selection. We did further manual selection, and chose the model that produced the lowest AIC score. The model with least AIC score resulted following subset of 5 predictor variables: genergy, gpuls, nbumps, nbump2, and nbumps4. We denote the model with these variables as Model 1.
+
 ```{r, echo = F}
 # Needs code
 ```
@@ -398,7 +412,7 @@ From the result of PCA we find that the first 11 components explain 97.2% of var
 
 ## Appendix
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 library(ggplot2)
 library(reshape2)
 qplot(x=X1, y=X2, data=melt(cor(x)), fill=value, geom="tile", colour = I("red"))
