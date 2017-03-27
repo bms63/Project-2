@@ -254,9 +254,9 @@ super <- cbind(confusion1,confusion2)
 kable(super, caption="Training vs Test")
 
 roc.Test <- roc(seismic.test$class, glm.probs, direction="<")
-par(mfrow = c(2,2))
-plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve", xlab="False Positive Rate", ylab="True Positive Rate", print.auc=TRUE)
-plot.roc(roc.Train, add=TRUE)
+#par(mfrow = c(2,2))
+#plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve", xlab="False Positive Rate", ylab="True Positive Rate", print.auc=TRUE)
+#plot.roc(roc.Train, add=TRUE)
 ```
 
 ## Linear Discriminant Analysis   
@@ -355,7 +355,172 @@ kable(super, caption="Training vs Test")
 grid.arrange(plot1, plot2, plot3, plot4, ncol=2)
 ```
 
+## Regularized Discriminant Analysis
+
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+##------------------------------------
+## Fit RDA model
+##------------------------------------
+
+rda.fit <- rda(class~., data=seismic.train)
+#rda.fit
+
+##
+# Using  model on TRAIN Data
+##
+rda.pred=predict(rda.fit, seismic.train, type="response")
+
+rda.class.train <- rda.pred$class
+
+posterior.train <- rda.pred$posterior
+truth.train <- seismic.train$class
+
+## Confusion matrix
+rda.train.confusion <- table(rda.class.train,seismic.train$class)
+rda.train.sensitivity <- rda.train.confusion[2,2]/sum(rda.train.confusion[,2])
+rda.train.specificity <- rda.train.confusion[1,1]/sum(rda.train.confusion[,1])
+
+confusion1 <- rda.train.confusion 
+# Sensitivity, Specificity and Confusion
+#rda.train.confusion
+#rda.train.sensitivity
+#rda.train.specificity
+
+mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
+  idx0 <- which(posterior[,1] > prob)
+  idx1 <- (1:dimension)[-idx0]
+  
+  prediction <- rep(NA,dimension)
+  prediction[idx0] = 0
+  prediction[idx1] = 1
+  
+  mx <- cbind(prediction,truth,prediction-truth)
+  
+  rda.train.confusion <- matrix(rep(NA,4), nrow = 2)
+  correct <- which(mx[,3] == 0)
+  rda.train.confusion[1,1] <- length(which(mx[correct,1] == 0))
+  rda.train.confusion[2,2] <- length(which(mx[correct,1] == 1))
+  rda.train.confusion[1,2] <- length(which(mx[,3] == -1))
+  rda.train.confusion[2,1] <- length(which(mx[,3] == 1))
+  
+  sensitivity <- rda.train.confusion[2,2]/sum(rda.train.confusion[,2])
+  specificity <- rda.train.confusion[1,1]/sum(rda.train.confusion[,1])
+  error.rate <- (rda.train.confusion[1,2] + rda.train.confusion[2,1])/sum(rda.train.confusion)
+  c(sensitivity, specificity, error.rate)
+}
+
+posterior.train <- rda.pred$posterior
+truth.train <- seismic.train$class
+
+prob.seq <- seq(.5,.98,by = .02)
+output.train <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
+colnames(output.train) <- c("Sensitivity", "Error.rate")
+
+for(i in 1:length(prob.seq)){
+  output.train[i,] <- mod.posterior(posterior.train,truth.train,prob.seq[i])[c(1,3)]
+}
+
+df1 <- as.data.frame(cbind(prob.seq,output.train))
+
+plot1 <- ggplot(data = df1, aes(x=prob.seq)) +
+  geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
+  geom_line(aes(y = Error.rate, colour = "Error rate")) +
+  scale_colour_manual(values=c("dark cyan", "dark grey"))
+
+## 
+# Using model on TEST Data
+##
+rda.pred=predict(rda.fit, seismic.test, type="response")
+
+rda.class.test <- rda.pred$class
+
+## Confusion matrix
+rda.test.confusion <- table(rda.class.test,seismic.test$class)
+rda.test.sensitivity <- rda.test.confusion[2,2]/sum(rda.test.confusion[,2])
+rda.test.specificity <- rda.test.confusion[1,1]/sum(rda.test.confusion[,1])
+
+mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
+  idx0 <- which(posterior[,1] > prob)
+  idx1 <- (1:dimension)[-idx0]
+  
+  prediction <- rep(NA,dimension)
+  prediction[idx0] = 0
+  prediction[idx1] = 1
+  
+  mx <- cbind(prediction,truth,prediction-truth)
+  
+  rda.test.confusion <- matrix(rep(NA,4), nrow = 2)
+  correct <- which(mx[,3] == 0)
+  rda.test.confusion[1,1] <- length(which(mx[correct,1] == 0))
+  rda.test.confusion[2,2] <- length(which(mx[correct,1] == 1))
+  rda.test.confusion[1,2] <- length(which(mx[,3] == -1))
+  rda.test.confusion[2,1] <- length(which(mx[,3] == 1))
+  
+  sensitivity <- rda.test.confusion[2,2]/sum(rda.test.confusion[,2])
+  specificity <- rda.test.confusion[1,1]/sum(rda.test.confusion[,1])
+  error.rate <- (rda.test.confusion[1,2] + rda.test.confusion[2,1])/sum(rda.test.confusion)
+  c(sensitivity, specificity, error.rate)
+}
+
+posterior.train <- rda.pred$posterior
+truth.train <- seismic.train$class
+
+prob.seq <- seq(.5,.98,by = .02)
+output.train <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
+colnames(output.train) <- c("Sensitivity", "Error.rate")
+
+for(i in 1:length(prob.seq)){
+  output.train[i,] <- mod.posterior(posterior.train,truth.train,prob.seq[i])[c(1,3)]
+}
+
+df1 <- as.data.frame(cbind(prob.seq,output.train))
+
+plot2 <- ggplot(data = df1, aes(x=prob.seq)) +
+  geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
+  geom_line(aes(y = Error.rate, colour = "Error rate")) +
+  scale_colour_manual(values=c("dark cyan", "dark grey"))
+
+confusion2 <- rda.test.confusion 
+
+super <- cbind(confusion1,confusion2)
+kable(super, caption="Training vs Test")
+
+# Sensitivity, Specificity and Confusion
+#rda.test.confusion
+#rda.test.sensitivity
+#rda.test.specificity
+
+#sum(rda.pred$posterior[,1]>=.5)
+#sum(rda.pred$posterior[,1]<.5)
+
+# grid.arrange(plot1, plot2)
+
+```
+
+# Variable selection and refitting
+
+Based on high error rate and low prediction accuracy (e.g., low sensitivity) estimates both in the training and test datasets, it is evident that the fitted regression and classification models in the preceding section have not been able to approximate better the relationship between response and predictor variables. The strong multicollinearity among some of the predictor variables found in the EDA (see section 2) may have contributed to the high error rate and lower interpretability in the resulting models. Therefore, in this section, for the improvement of prediction accuracy and model interpretability, we employ some of the commonly used variable selection methods: stepwise subset selection, shrinkage, and dimensionality reduction.    
+
+
+## Stepwise Variable Selection
+
+We use forward and backward selection. We did further manual selection, and chose the model that produced the lowest AIC score. The model with least AIC score resulted following subset of 5 predictor variables: genergy, gpuls, nbumps, nbump2, and nbumps4. We denote the model with these variables as Model 1.
+
+```{r, echo = F}
+# Needs code
+```
+
+## LASSO
+We perform Least Absolute Shrinkage and Selection Operator (LASSO) regression, which fits a model by shrinking some of the coefficients toward exactly zero. LASSO is expected to perform well for the seismic-bumps dataset as some of the predictors aren't related to the response, as we found in the EDA process described in section 2. After performing LASSO, we found that, 11 of total 15 coefficient estimates of predictor variables are exactly 0. The 4 variables with substantial coefficients are: shift, gpuls, and nbumps. These variables are incorporated in the model, which we denote as Model 2. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+##-----------------------------------------------------
+## LASSO 
+##-----------------------------------------------------
+
+par(mfrow=c(1,2))
 
 grid=10^seq(10,-2,length=100)
 X.train=seismic.train[-16]
@@ -370,37 +535,22 @@ lasso.mod=glmnet(X.train,y.train,alpha=1,lambda=grid, family = "binomial")
 
 plot(lasso.mod,xvar="lambda",label=TRUE) 
 
-
 set.seed(1)
 cv.out=cv.glmnet(X.train,y.train,alpha=1)
+
 plot(cv.out,xvar="lambda",label=TRUE) 
 
 bestlam=cv.out$lambda.min
 lasso.pred=predict(lasso.mod,s=bestlam,newx=X.test)
-mean((lasso.pred-y.test)^2)
+#mean((lasso.pred-y.test)^2)
 out=glmnet(X.train,y.train,alpha=1,lambda=grid)
 lasso.coef=predict(out,type="coefficients",s=bestlam)[1:16,]
 
+
 lasso.table <- round(lasso.coef[lasso.coef!=0],5)
 lasso.table <- (as.data.frame(t(lasso.table)))
-lasso.table
-```
-
-# Variable selection and refitting
- Based on high error rate and low prediction accuracy (e.g., low sensitivity) estimates both in the training and test datasets, it is evident that the fitted regression and classification models in the preceding section have not been able to approximate better the relationship between response and predictor variables. The strong multicollinearity among some of the predictor variables found in the EDA (see section 2) may have contributed to the high error rate and lower interpretability in the resulting models. Therefore, in this section, for the improvement of prediction accuracy and model interpretability, we employ some of the commonly used variable selection methods: stepwise subset selection, shrinkage, and dimensionality reduction.    
- 
-## Stepwise Variable Selection
-We use forward and backward selection. We did further manual selection, and chose the model that produced the lowest AIC score. The model with least AIC score resulted following subset of 5 predictor variables: genergy, gpuls, nbumps, nbump2, and nbumps4. We denote the model with these variables as Model 1.
-
-```{r, echo = F}
-# Needs code
-```
-
-## LASSO
-We perform Least Absolute Shrinkage and Selection Operator (LASSO) regression, which fits a model by shrinking some of the coefficients toward exactly zero. LASSO is expected to perform well for the seismic-bumps dataset as some of the predictors aren't related to the response, as we found in the EDA process described in section 2. After performing LASSO, we found that, 11 of total 15 coefficient estimates of predictor variables are exactly 0. The 4 variables with substantial coefficients are: shift, gpuls, and nbumps. These variables are incorporated in the model, which we denote as Model 2. 
-
-```{r, echo = F}
-# Needs code
+names(lasso.table)<-c("Intercept", "Seismic", "Shift", "Gpuls", "nbumps")
+kable(lasso.table, caption="Model 2 through Lasso")
 ```
 
 ## Principal component analysis
@@ -410,11 +560,167 @@ From the result of PCA we find that the first 11 components explain 97.2% of var
 # Needs code
 ```
 
-## Appendix
+# Logistic Regression after Variable Selection
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+##--------------------------------------------
+## Logistic Regression  after Variable Selection
+##--------------------------------------------
+
+# Model fitted to Training Data
+glm.train <- glm(class~seismic+shift+gpuls+nbumps, seismic.train, family=binomial)
+
+# Model Summary
+#summary(glm.train)
+
+glm.probs=predict(glm.train, type="response")
+
+glm.pred=rep("0",1938)
+glm.pred[glm.probs >.5]="1"
+confusion <- table(glm.pred ,seismic.train$class)
+#mean(glm.pred==seismic.train$class)
+
+roc.Train <- roc(seismic.train$class, glm.probs, direction = "<")
+
+# Confusion Table
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion1 <- confusion
+#sensitivity
+#specificity
+
+# Using Training model on Test Data
+glm.probs=predict(glm.train, seismic.test, type="response")
+
+glm.pred=rep("0",646)
+glm.pred[glm.probs >.5]="1"
+confusion <- table(glm.pred, seismic.test$class)
+#mean(glm.pred==seismic.test$class)
+
+# Confusion Table
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion2 <- confusion
+#sensitivity
+#specificity
+
+super <- cbind(confusion1,confusion2)
+kable(super, caption="Model-1 vs Model-2")
+
+#roc.Test <- roc(seismic.test$class, glm.probs, direction="<")
+
+# Plotting Roc Curve for Test Data
+#plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve after Variable Selection", xlab="False Positive Rate", ylab="True Positive Rate", print.auc=TRUE)
+#plot.roc(roc.Train, add=TRUE)
+```
+
+## Quadratic Discriminant Analysis after variable selection
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+##-----------------------------------------
+## Fit QDA model after variable selection
+##-----------------------------------------
+
+# Model 1
+qda.fit <- qda(class~seismic+shift+gpuls+nbumps, data=seismic.train)
+qda.class=predict(qda.fit,seismic.test)$class
+confusion <- table(qda.class ,seismic.test$class)
+
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion1 <- confusion
+#sensitivity
+#specificity
+
+# Model 2
+qda.fit <- qda(class ~ genergy + gpuls + nbumps + nbumps2 + nbumps4, data=seismic.train)
+qda.class=predict(qda.fit,seismic.test)$class
+
+confusion <- table(qda.class ,seismic.test$class)
+
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion2 <- confusion
+#sensitivity
+#specificity
+
+super <- cbind(confusion1,confusion2)
+kable(super, caption="Model-1 vs Model-2")
+
+```
+
+## Regularized Discriminant Analysis after variable selection
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+##------------------------------------------------------------
+## Regularized Discriminant Analysis after variable selection
+##------------------------------------------------------------
+
+# Model 1
+
+rda.fit <- rda(class~seismic+shift+gpuls+nbumps, data = seismic.train, gamma = 0.05, lambda = 0.2)
+
+rda.class=predict(rda.fit,seismic.test)$class
+
+confusion <- table(rda.class ,seismic.test$class)
+
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion1 <- confusion
+#sensitivity
+#specificity
+
+# Model 2
+
+rda.fit <- rda(class~genergy + gpuls + nbumps + nbumps2 + nbumps4, data = seismic.train, gamma = 1, lambda = 1)
+
+rda.class=predict(rda.fit,seismic.test)$class
+
+confusion <- table(rda.class ,seismic.test$class)
+
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+
+confusion2 <- confusion2
+#sensitivity
+#specificity
+
+super <- cbind(confusion1,confusion2)
+kable(super, caption="Model-1 vs Model-2")
+
+```
+
+# Appendix
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 library(ggplot2)
 library(reshape2)
 qplot(x=X1, y=X2, data=melt(cor(x)), fill=value, geom="tile", colour = I("red"))
-
 ```
+
+## Pre-Variable Selection
+
+ | Model | Test Specificity | Test Sensitivity | Training Specificity | Training Sensitivity |
+| ------------------------- | ----------|------------|-------:|:------:|
+| Indicator  | 123  | 123  | 123 |  123 |
+| LDA | 123 | 123 | 123 | 123 |
+| QDA  | 123 | 123 | 123 | 123 |
+| RDA  | 123 | 123 | 123 | 123 |
+| Log Regression  | 123 | 123 | 123 | 123 |
+
+## Post-Variable Selection
+
+ | Model | Test Specificity | Test Sensitivity | Training Specificity | Training Sensitivity |
+| ------------------------- | ----------|------------|-------:|:------:|
+| Indicator  | 123  | 123  | 123 |  123 |
+| LDA | 123 | 123 | 123 | 123 |
+| QDA  | 123 | 123 | 123 | 123 |
+| RDA  | 123 | 123 | 123 | 123 |
+| Log Regression  | 123 | 123 | 123 | 123 |
