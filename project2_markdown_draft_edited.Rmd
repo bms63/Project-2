@@ -7,11 +7,11 @@ output: pdf_document
 
 # Data overview  
  
-Mining activity has long been associated to mining hazards, such as fire, flood, toxic contaminant and others. (Dozolme, P., 2016) Among these hazards, seismic hazard is the hardest detectable and predictable, in this respect it is comparable to an earthquake. (Sikora & Wr?bel, 2010) Minimizing loss from seismic hazard requires both advanced data gathering method and data analysis method. In recent years, more and more advanced seismic and seismoacoustic monitoring systems allow better and more timely data acquisition of rock mass processes. Still, the big disproportion between the number of low-energy seismic events and the number of high-energy phenomena (e.g. > 10^4J) makes traditional statistical analysis methods insufficient to make useful prediction. Machine learning are needed to achieve higher prediction accuracy within short time window.  
+Mining activity has long been associated with mining hazards, such as fires, floods, and toxic contaminants (Dozolme, P., 2016). Among these hazards, seismic hazards are the hardest to detect and predict (Sikora & Wróbel, 2010). Minimizing loss from seismic hazards requires both advanced data collection and analysis. In recent years, more and more advanced seismic and seismoacoustic monitoring systems have come about. Still, the disproportionate number of low-energy versus high-energy seismic phenomena (e.g. > $10^4$J) renders traditional analysis methods insufficient.
 
-In this project, we used seismic-bumps dataset provided by Sikora & Wr?bel (2010), found in the UCI Machine Learning Repository. This seismic-bumps dataset comes from two longwalls located in a coal mine in Poland and contains 2584 observations and 19 attributes. Each observation holds summary statement of about seismic activity in the rock mass within one shift (8 hours) (Sikora & Wr?bel, 2010). Note that the decision attribute, named "class", has values 1 and 0. This variable is the response variable we use in this project. A class value of "1" is categorized as "hazardous state", which essentially indicates a registered seismic bump with high energy (>104 J) in the next shift. A class value "0" represents non-hazardous state in the next shift. According to Bukowska, (2006), a number of factors having an effect on seismic hazard occurrence were proposed. Among other factors, the occurrence of tremors with energy > 10^4J was listed. The purpose is to find whether and how the other 18 variables can be used to determine the hazardous status of the mine.
+In this project, we used the seismic-bumps dataset provided by Sikora & Wróbel (2010), found in the UCI Machine Learning Repository. This seismic-bumps dataset comes from a coal mine located in Poland and contains 2584 observations of 19 attributes. Each observation summarizes seismic activity in the rock mass within one 8-hour shift. Note that the decision attribute, named "class", has values 1 and 0. This variable is the response variable we use in this project. A class value of "1" is categorized as "hazardous state", which essentially indicates a registered seismic bump with high energy (>$10^4$J) in the next shift. A class value "0" represents non-hazardous state in the next shift. According to Bukowska (2006), a number of factors having an effect on seismic hazard occurrence were proposed. Among other factors, the occurrence of tremors with energy > $10^4$J was listed. The purpose is to find whether and how the other 18 variables can be used to determine the hazard status of the mine.
 
-## Table 1. Attribute information of the seismic-bumps dataset (Sikora & Wr�bel, 2010) 
+### Table 1. Attribute information of the seismic-bumps dataset
 
  | Data Attributes | Description | Data Types | 
 | -----------|-------------------------------------------------|----------|
@@ -24,13 +24,7 @@ In this project, we used seismic-bumps dataset provided by Sikora & Wr?bel (2010
 | gdpuls | deviation of recorded pulses within previous shift from average number of pulses recorded during eight previous shifts  | Continuous  | 
 | ghazard  | result of shift seismic hazard assessment by the seismoacoustic method based on registration coming from GMax  | Categorical | 
 | nbumps   | the number of seismic bumps recorded within previous shift | Continuous  | 
-| nbumps2  | the number of seismic bumps (102-103 J) registered within previous shift | Continuous  | 
-| nbumps3  | the number of seismic bumps (103-104 J) registered within previous shift | Continuous  | 
-| nbumps4  | the number of seismic bumps (104-105 J) registered within previous shift | Continuous  | 
-| nbumps5  | the number of seismic bumps (105-106 J) registered within previous shift | Continuous  | 
-| nbumps6  | the number of seismic bumps (106-107 J) registered within previous shift | Continuous  | 
-| nbumps7  | the number of seismic bumps (107-108 J) registered within previous shift | Continuous  | 
-| nbumps8 and nbumps9  | the number of seismic bumps (108-1010 J) registered within previous shift | Continuous  | 
+| nbumps$i$, $i\in\{1,\ldots,5\}$  | the number of seismic bumps ($10^i-10^{i+1}$ J) registered within previous shift | Continuous  | 
 | energy   | total energy of seismic bumps registered within previous shift  | Continuous  | 
 | maxenergy  | maximum energy of the seismic bumps registered within previous shift  | Continuous  | 
 | class  | the decision attribute: '1' - high energy seismic bump occurred in the next shift ('hazardous state'), '0' - no high energy seismic bumps occurred in th next shift ('non-hazardous state') | Categorical   | 
@@ -39,7 +33,7 @@ In this project, we used seismic-bumps dataset provided by Sikora & Wr?bel (2010
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # Configuring Space
-rm(list=ls())
+#rm(list=ls())
 
 # Loading packages into R
 library(data.table);library(car);library(lars);library(knitr);library(ISLR);library(leaps);library(glmnet);library(MASS);library(reshape);library(ggplot2);library(pROC)
@@ -47,23 +41,23 @@ library(klaR);library(gridExtra)
 
 
 #setwd("~/Box Sync/Skool/Spring 2017/557/Project-2-master")
-setwd("F:/Penn_State/Spring2017/STAT557/Workspace")
+#setwd("F:/Penn_State/Spring2017/STAT557/Workspace")
 seismic <- read.csv("seismic.csv")
 ```
 
 
-# 2. Exploratory Data Analysis 
+# Exploratory Data Analysis 
  
-The distribution of class variable suggests the complexity of seismic processes, which can be seen from the big disproportion between the number of low-energy seismic events and the number of high-energy phenomena (e.g. > 10^4J) : in 2584 records, only 170 has show the value 1. Each of the predictor variables (e.g., seismic hazard state, seismoacoustic hazard state, shift, seismic energy, puls, number of bumps) represent measurements of seismic activity during each shift. Some predictor variables are stored as categorical factors and some are continuous (see Table 1).  
- 
-Since the seismic-bumps dataset involves predicting a qualitative response values, we want to employ widely-used classification techniques such as logistic regression and discriminant analysis methods for the prediction of future seismic hazards. In other words, we want to examine which observations of seismic activities in multiple shifts can potentially lead to the hazardous or non-hazardous states in the next shift. Both logistic regression and discriminant analysis methods assume predictors to be normally distributed. Therefore, we examine the distribution of predictor variables and found that data is right skewed. We also found the existence of severe multicollinearity (VIF>10) among several variables.
+The state of the mine was indeed deemed hazardous infrequently $-$ only 170 shifts out of 2584 $-$ a difficult problem in our analyses. We want to examine which observations of seismic activity can help in the prediction of the hazard state of the mine during the next shift. Regression diagnostics indicate that the data, in general, meet most assumptions. However, we see that that data are somewhat skewed right, and there is severe multicollinearity (VIF > 10) between some of the covariates, as shown below.
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+\vspace{-14mm}
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.height = 3}
 ##---------------------------------------------
 ## Some quick EDA from Hillary
 ##---------------------------------------------
 
-par(mfrow=c(2,2))
+par(mfrow=c(1,2))
 
 seismic[,c(4:7,9:13,17:18)] <- seismic[,c(4:7,9:13,17:18)]
 seismic <- seismic[,-(14:16)]
@@ -83,11 +77,7 @@ res <- fit$residuals
 fitvals <- fit$fitted
 plot(fitvals, res, xlab = "Fitted Values", ylab = "Residuals")
 abline(h=0, col = 'red')
-hist(res, xlab = "Residuals")
-
-```
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+hist(res, xlab = "Residuals", main = "")
 
 par(mfrow=c(2,2))
 
@@ -96,7 +86,6 @@ x <- seismic[c(-1,-2,-3,-8,-14,-15,-16,-19)]
 vifs <- round(as.data.frame(t(vif(fit))),2)
 kable(vifs[1:7], caption="VIFs of Linear Model")
 kable(vifs[8:15], caption="VIFs of Linear Model")
-
 ```
 
 # Classification before Variable Selection 
@@ -118,12 +107,11 @@ train <- (1:n)[-test]
 seismic.train <- seismic[train,]
 seismic.test <- seismic[test,]
 
-a <-dim(seismic)
-b <-dim(seismic.train)
-c <-dim(seismic.test)
-T <- matrix(c(b,c), nrow=2, dimnames = list(c("Obs", "Varialbes"),c("Training", "Test")))
-
-kable(T, caption= "Training and Test Dimensions")
+#a <-dim(seismic)
+#b <-dim(seismic.train)
+#c <-dim(seismic.test)
+#T <- matrix(c(b,c), nrow=2, dimnames = list(c("Obs", "Varialbes"),c("Training", "Test")))
+#kable(T, caption= "Training and Test Dimensions")
 
 # Function that can help obtain sensitivity, specificity, and overall error rate as threshhold changes
 mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
@@ -153,7 +141,7 @@ mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
  
 ## Linear Regression of an Indicator Matrix
 
-Since our response variable has two classes (e.g., hazardous vs non-hazardous states), we start with linear regression of an indicator matrix as this method approximates a linear decision boundary among observations belonging to these classes. Our model outputs overall error rate of 6.7% with sensitivity 0% and specificity 100%. That essentially means, while the model has lower overall error rate, it has only 1% chance of predicting hazard state in the next shift, whereas in 99% of the cases it successfully predicted non-hazardous state.
+We begin with linear regression of an indicator matrix as this method can approximate a linear decision boundary among observations belonging to one of two classes. Our model outputs an overall error rate of ~6.8% on the training data and ~6.3% on the test data. However, this comes with no sensitivity, which means we would almost never predict a hazardous event in the mine.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 ##----------------------------------------
@@ -229,20 +217,21 @@ error.rate <- (confusion2[1,2] + confusion2[2,1])/sum(confusion2)
 #c(sensitivity, specificity, error.rate)
 
 super <- as.table(cbind(confusion1,confusion2))
-kable(super, caption="Training vs Test")
+colnames(super) <- c("Train 0", "Train 1", "Test 0", "Test 1")
+rownames(super) <- c("Predict 0", "Predict 1")
+kable(super, caption="Training vs. Test for regression of indicator matrix")
 
 ```
 
 ## Logistic Regression:   
  
-We first fit a logistic regression model to predict "class" using all the predictors in the training dataset. It appeasers that seismic, shift, and gpuls have positive coefficients and statistically significant p-values. Therefore, seismic, shift, gpuls have clear positive association with the hazardous/non-hazardous seismic activity. Then we compute the probabilities for the training observations to predict which observations correspond to the hazardous or non-hazardous seismic activity. For that, we used a threshold probability of 0.5. The confusion matrix on training data shows that while this logistic model slightly outperformed LDA (training) model in terms of overall error rate (6.7%), it has substantially lower sensitivity (4.6%) than that of LDA (17.6%). Our fitted logistic model on the training dataset has even poorer performance (see Figure 4) in making  prediction on the test dataset (overall error rate: 6.6%; sensitivity: 0%,; specificity: 100%).  
+We then  fit a logistic regression model to predict the response using all the predictors in the training dataset. Initially, we used a threshhold probability of 0.5 to classify into state 0 or 1. This yields an overall error rate of ~6.7% for the training data and 6.5% for the dest data, with minimal improvement in sensitivity. The ROC curve for this model indicates that it is still not a great fit for the data.
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, fig.align='left'}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, fig.height = 2.5, fig.width = 3, fig.align='center'}
 
 ##--------------------------------------------
 ## Logistic Regression  Confusion\Roc
 ##--------------------------------------------
-
 glm.train <- glm(class~., seismic.train, family=binomial)
 #summary(glm.train)
 
@@ -277,22 +266,43 @@ specificity <- confusion2[1,1]/sum(confusion2[,1])
 #specificity
 
 super <- cbind(confusion1,confusion2)
-kable(super, caption="Training vs Test")
+colnames(super) <- c("Train 0", "Train 1", "Test 0", "Test 1")
+rownames(super) <- c("Predict 0", "Predict 1")
+kable(super, caption="Training vs. Test for logistic regression")
 
 roc.Test <- roc(seismic.test$class, glm.probs, direction="<")
-#par(mfrow = c(2,2))
-#plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve", xlab="False Positive Rate", ylab="True Positive Rate", print.auc=TRUE)
-#plot.roc(roc.Train, add=TRUE)
+
+par(mfrow = c(1,1))
+plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve", xlab="False Positive Rate", ylab="True Positive Rate", print.auc=TRUE)
+plot.roc(roc.Train, add=TRUE)
+
+# Get error rate plot
+# prob.seq <- seq(.5,.98,by = .02)
+# output.train <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
+# colnames(output.train) <- c("Sensitivity", "Error.rate")
+# posterior.train <- matrix(data = cbind(1-glm.probs,glm.probs), ncol = 2)
+# truth.train <- seismic.train$class
+# 
+# for(i in 1:length(prob.seq)){
+#   output.train[i,] <- mod.posterior(posterior.train,truth.train,prob.seq[i])[c(1,3)]
+# }
+# 
+# df <- as.data.frame(cbind(prob.seq,output.train))
+# 
+# plot0 <- ggplot(data = df, aes(x=prob.seq)) +
+#   geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
+#   geom_line(aes(y = Error.rate, colour = "Error rate")) +
+#   scale_colour_manual(values=c("dark cyan", "dark grey"))
+# plot0
+
 ```
 
 ## Linear Discriminant Analysis   
  
-We perform LDA on both training and test datasets. First we fit a LDA model using observations from training dataset. The LDA outputs indicate that 93.2% of the training observations correspond to the non-hazardous state in the next shift of mining activity. The group means for the estimation of ?k suggests that previous mining shift's higher number of seismic bumps and associated higher released energy (measured in Joule) from seismic bumps can be related to the hazardous state in the later mining activity. Using this fitted model parameter we obtain two level of predictions, first onto training data, and then onto test data.  
+It is reasonable to believe that each class is distributed normally with some different mean vector. Thus, we implemented an LDA approach. Using a classification threshhold of 0.5 yields an overall error rate of ~7.4% for the training data and ~7.7% for the test data, but with much higher sensitivity than in the previous models. The group means suggest that a mining shift with a higher number of seismic bumps and associated higher released energy (measured in Joules) is correlated with hazard status of the mine in the subsequent shift.
 
-The confusion matrices obtained from training and test data show slightly different outputs in terms of sensitivity, specificity, and overall error rate (see Figure 2 and 3). It appears that training dataset produced slightly improved LDA model (overall error rate: 7.4%; sensitivity: 17.6%; specificity: 98%) than that of the test dataset (error rate: 7.8%; sensitivity: 12.8%; specificity: 97%).
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
-
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, fig.cap = 'Results from the training data are presented on the left, and for the test data on the right. Top: Sensitivity and overall error rate as a function of the threshhold probability used to classify an event as 0 or 1. Bottom: ROC curves show much worse performance on the test data.'}
 
 lda.fit <- lda(class~., data = seismic, subset = train)
 lda.pred <- predict(lda.fit, seismic.train)
@@ -376,14 +386,20 @@ plot4 <- ggplot(data = df4, aes(x=df4$`1-Specificity`)) +
   geom_line(aes(y = df4$Sensitivity, colour = "Sensitivity"), linetype = "dashed")
 
 super <- cbind(confusion1,confusion2)
+colnames(super) <- c("Train 0", "Train 1", "Test 0", "Test 1")
+rownames(super) <- c("Predict 0", "Predict 1")
 kable(super, caption="Training vs Test")
 
 grid.arrange(plot1, plot2, plot3, plot4, ncol=2)
 ```
 
+\vspace{-10mm}
+
 ## Regularized Discriminant Analysis
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+Similar to LDA, it is reasonable to believe that each class is distributed normally with some different mean vector and covariance matrix, as seen in quadratic discriminant analysis (QDA). RDA allows for a compromise between LDA and QDA. We implemented an RDA approach. Using a classification threshhold of 0.5 yields an overall error rate of ~7.6% for the training data and ~8.2% for the test data. Poor performance on the test data might be indicative of RDA overfitting for this model.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, fig.height = 2, fig.cap = 'Sensitivity vs. error rate as a function of threshhold probability used to classify an event as 0 or 1.'}
 
 ##------------------------------------
 ## Fit RDA model
@@ -398,7 +414,6 @@ rda.fit <- rda(class~., data=seismic.train)
 rda.pred=predict(rda.fit, seismic.train, type="response")
 
 rda.class.train <- rda.pred$class
-
 posterior.train <- rda.pred$posterior
 truth.train <- seismic.train$class
 
@@ -413,46 +428,20 @@ confusion1 <- rda.train.confusion
 #rda.train.sensitivity
 #rda.train.specificity
 
-mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
-  idx0 <- which(posterior[,1] > prob)
-  idx1 <- (1:dimension)[-idx0]
-  
-  prediction <- rep(NA,dimension)
-  prediction[idx0] = 0
-  prediction[idx1] = 1
-  
-  mx <- cbind(prediction,truth,prediction-truth)
-  
-  rda.train.confusion <- matrix(rep(NA,4), nrow = 2)
-  correct <- which(mx[,3] == 0)
-  rda.train.confusion[1,1] <- length(which(mx[correct,1] == 0))
-  rda.train.confusion[2,2] <- length(which(mx[correct,1] == 1))
-  rda.train.confusion[1,2] <- length(which(mx[,3] == -1))
-  rda.train.confusion[2,1] <- length(which(mx[,3] == 1))
-  
-  sensitivity <- rda.train.confusion[2,2]/sum(rda.train.confusion[,2])
-  specificity <- rda.train.confusion[1,1]/sum(rda.train.confusion[,1])
-  error.rate <- (rda.train.confusion[1,2] + rda.train.confusion[2,1])/sum(rda.train.confusion)
-  c(sensitivity, specificity, error.rate)
-}
-
-posterior.train <- rda.pred$posterior
-truth.train <- seismic.train$class
-
-prob.seq <- seq(.5,.98,by = .02)
-output.train <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
-colnames(output.train) <- c("Sensitivity", "Error.rate")
-
-for(i in 1:length(prob.seq)){
-  output.train[i,] <- mod.posterior(posterior.train,truth.train,prob.seq[i])[c(1,3)]
-}
-
-df1 <- as.data.frame(cbind(prob.seq,output.train))
-
-plot1 <- ggplot(data = df1, aes(x=prob.seq)) +
-  geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
-  geom_line(aes(y = Error.rate, colour = "Error rate")) +
-  scale_colour_manual(values=c("dark cyan", "dark grey"))
+# prob.seq <- seq(.5,.98,by = .02)
+# output.train <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
+# colnames(output.train) <- c("Sensitivity", "Error.rate")
+# 
+# for(i in 1:length(prob.seq)){
+#   output.train[i,] <- mod.posterior(posterior.train,truth.train,prob.seq[i])[c(1,3)]
+# }
+# 
+# dfr1 <- as.data.frame(cbind(prob.seq,output.train))
+# 
+# plot1 <- ggplot(data = dfr1, aes(x=prob.seq)) +
+#   geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
+#   geom_line(aes(y = Error.rate, colour = "Error rate")) +
+#   scale_colour_manual(values=c("dark cyan", "dark grey"))
 
 ## 
 # Using model on TEST Data
@@ -466,50 +455,29 @@ rda.test.confusion <- table(rda.class.test,seismic.test$class)
 rda.test.sensitivity <- rda.test.confusion[2,2]/sum(rda.test.confusion[,2])
 rda.test.specificity <- rda.test.confusion[1,1]/sum(rda.test.confusion[,1])
 
-mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
-  idx0 <- which(posterior[,1] > prob)
-  idx1 <- (1:dimension)[-idx0]
-  
-  prediction <- rep(NA,dimension)
-  prediction[idx0] = 0
-  prediction[idx1] = 1
-  
-  mx <- cbind(prediction,truth,prediction-truth)
-  
-  rda.test.confusion <- matrix(rep(NA,4), nrow = 2)
-  correct <- which(mx[,3] == 0)
-  rda.test.confusion[1,1] <- length(which(mx[correct,1] == 0))
-  rda.test.confusion[2,2] <- length(which(mx[correct,1] == 1))
-  rda.test.confusion[1,2] <- length(which(mx[,3] == -1))
-  rda.test.confusion[2,1] <- length(which(mx[,3] == 1))
-  
-  sensitivity <- rda.test.confusion[2,2]/sum(rda.test.confusion[,2])
-  specificity <- rda.test.confusion[1,1]/sum(rda.test.confusion[,1])
-  error.rate <- (rda.test.confusion[1,2] + rda.test.confusion[2,1])/sum(rda.test.confusion)
-  c(sensitivity, specificity, error.rate)
-}
-
-posterior.train <- rda.pred$posterior
-truth.train <- seismic.train$class
-
-prob.seq <- seq(.5,.98,by = .02)
-output.train <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
-colnames(output.train) <- c("Sensitivity", "Error.rate")
-
-for(i in 1:length(prob.seq)){
-  output.train[i,] <- mod.posterior(posterior.train,truth.train,prob.seq[i])[c(1,3)]
-}
-
-df1 <- as.data.frame(cbind(prob.seq,output.train))
-
-plot2 <- ggplot(data = df1, aes(x=prob.seq)) +
-  geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
-  geom_line(aes(y = Error.rate, colour = "Error rate")) +
-  scale_colour_manual(values=c("dark cyan", "dark grey"))
+# posterior.test <- rda.pred$posterior
+# truth.test <- seismic.test$class
+# 
+# prob.seq <- seq(.5,.98,by = .02)
+# output.test <- matrix(rep(NA,length(prob.seq)*2), ncol = 2)
+# colnames(output.test) <- c("Sensitivity", "Error.rate")
+# 
+# for(i in 1:length(prob.seq)){
+#   output.test[i,] <- mod.posterior(posterior.test,truth.test,prob.seq[i])[c(1,3)]
+# }
+# 
+# dfr2 <- as.data.frame(cbind(prob.seq,output.test))
+# 
+# plot2 <- ggplot(data = dfr2, aes(x=prob.seq)) +
+#   geom_line(aes(y = Sensitivity, colour = "Sensitivity"), linetype = "dashed") +
+#   geom_line(aes(y = Error.rate, colour = "Error rate")) +
+#   scale_colour_manual(values=c("dark cyan", "dark grey"))
 
 confusion2 <- rda.test.confusion 
 
 super <- cbind(confusion1,confusion2)
+colnames(super) <- c("Train 0", "Train 1", "Test 0", "Test 1")
+rownames(super) <- c("Predict 0", "Predict 1")
 kable(super, caption="Training vs Test")
 
 # Sensitivity, Specificity and Confusion
@@ -520,27 +488,33 @@ kable(super, caption="Training vs Test")
 #sum(rda.pred$posterior[,1]>=.5)
 #sum(rda.pred$posterior[,1]<.5)
 
-# grid.arrange(plot1, plot2)
+#grid.arrange(plot1, plot2, ncol =2)
 
 ```
 
 # Variable selection and refitting
 
-Based on high error rate and low prediction accuracy (e.g., low sensitivity) estimates both in the training and test datasets, it is evident that the fitted regression and classification models in the preceding section have not been able to approximate better the relationship between response and predictor variables. The strong multicollinearity among some of the predictor variables found in the EDA (see section 2) may have contributed to the high error rate and lower interpretability in the resulting models. Therefore, in this section, for the improvement of prediction accuracy and model interpretability, we employ some of the commonly used variable selection methods: stepwise subset selection, shrinkage, and dimensionality reduction.    
+Based on high error rate and low prediction accuracy (e.g., low sensitivity) estimates both in the training and test datasets, it is evident that the fitted regression and classification models in the preceding sections are not able to approximate the relationship between response and predictor variables. The strong multicollinearity among some of the predictor variables may have contributed to the high error rate. Therefore,in order tp improve prediction accuracy, we employ some commonly used variable selection methods: stepwise selection, LASSO, and principle component analysis.
 
 
 ## Stepwise Variable Selection
 
-We use forward and backward selection. We did further manual selection, and chose the model that produced the lowest AIC score. The model with least AIC score resulted following subset of 5 predictor variables: genergy, gpuls, nbumps, nbump2, and nbumps4. We denote the model with these variables as Model 1.
+We performed forward and backward selection as a starting point. We did further manual selection, and chose the model that produced the lowest AIC score (AIC = -83.097). We denote the model with these variables as Model 1, which can be written as
+\vspace{-4mm}
+$$class \sim \beta_0 + \beta_1\cdot genergy + \beta_2\cdot gpuls + \beta_3\cdot nbumps + \beta_4\cdot nbumps2 + \beta_5\cdot nbumps4 + \epsilon, \quad \epsilon \sim N(0,\sigma^2) $$
 
-```{r, echo = F}
-# Needs code
+```{r, echo = F, results = 'hide', message = F}
+fit <- lm(class ~., data = seismic)
+AIC(step(fit))
+
+fit2 <- lm(class~ genergy + gpuls + nbumps + nbumps2 + nbumps4, data = seismic)
+AIC(fit2)
 ```
 
 ## LASSO
-We perform Least Absolute Shrinkage and Selection Operator (LASSO) regression, which fits a model by shrinking some of the coefficients toward exactly zero. LASSO is expected to perform well for the seismic-bumps dataset as some of the predictors aren't related to the response, as we found in the EDA process described in section 2. After performing LASSO, we found that, 11 of total 15 coefficient estimates of predictor variables are exactly 0. The 4 variables with substantial coefficients are: seismic, shift, gpuls, and nbumps. These variables are incorporated in the model, which we denote as Model 2. 
+We also performed Least Absolute Shrinkage and Selection Operator (LASSO) regression, which fits a model by shrinking some of the coefficients toward exactly zero using the $\mathcal{L}_1$ penalty. According to LASSO, 11 of the 15 covariates should be removed from the model. The 4 remaining covariates are seismic, shift, gpuls, and nbumps. These variables are incorporated into a model, denoted Model 2. 
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, fig.height = 3, fig.cap = 'Plots of covariate coefficients (left) and lambda selection (right) for LASSO.'}
 
 ##-----------------------------------------------------
 ## LASSO 
@@ -573,10 +547,10 @@ out=glmnet(X.train,y.train,alpha=1,lambda=grid)
 lasso.coef=predict(out,type="coefficients",s=bestlam)[1:16,]
 
 
-lasso.table <- round(lasso.coef[lasso.coef!=0],5)
-lasso.table <- (as.data.frame(t(lasso.table)))
-names(lasso.table)<-c("Intercept", "Seismic", "Shift", "Gpuls", "nbumps")
-kable(lasso.table, caption="Model 2 through Lasso")
+#lasso.table <- round(lasso.coef[lasso.coef!=0],5)
+#lasso.table <- (as.data.frame(t(lasso.table)))
+#names(lasso.table)<-c("Intercept", "Seismic", "Shift", "Gpuls", "nbumps")
+#kable(lasso.table, caption="Model 2 through Lasso")
 ```
 
 ## Principal component analysis
