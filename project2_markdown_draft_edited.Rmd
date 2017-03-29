@@ -556,8 +556,53 @@ lasso.coef=predict(out,type="coefficients",s=bestlam)[1:16,]
 ## Principal component analysis
 From the result of PCA we find that the first 11 components explain 97.2% of variance. Looking at variable loading from PCA we can see that the variable load is small (<0.6 for the first four component).
 
-```{r}
-# Needs code
+```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+library(pls)
+set.seed(2)
+pcr.fit=pcr(class~., data=seismic ,scale=TRUE,validation ="CV")
+summary(pcr.fit)
+
+validationplot(pcr.fit,val.type="MSEP")
+
+set.seed(1)
+pcr.fit=pcr(class~., data=seismic,subset=train,scale=TRUE,
+validation ="CV")
+validationplot(pcr.fit,val.type="MSEP")
+#pcr.pred=predict(pcr.fit,x[test,],ncomp=7)
+
+par(mfrow=c(1,2))
+
+pr.out=prcomp(seismic, validation ="CV", scale=TRUE)
+
+vars <- names(seismic)
+
+Cols=function(vec){
+    cols=rainbow(length(unique(vec)))
+    return(cols[as.numeric(as.factor(vec))])
+}
+
+plot(pr.out$x[,1:2], col=Cols(vars), pch=19,xlab="Z1",ylab="Z2")
+plot(pr.out$x[,c(1,3)], col=Cols(vars), pch=19,xlab="Z1",ylab="Z3")
+summary(pr.out)
+plot(pr.out)
+pve=100*pr.out$sdev^2/sum(pr.out$sdev^2)
+plot(pve,  type="o", ylab="PVE", xlab="Principal Component", col="blue")
+plot(cumsum(pve), type="o", ylab="Cumulative PVE", xlab="Principal Component", col="brown3")
+
+library(pls)
+set.seed(2)
+pcr.fit=pcr(class~., data=seismic,scale=TRUE,validation="CV")
+summary(pcr.fit)
+validationplot(pcr.fit,val.type="MSEP")
+set.seed(1)
+pcr.fit=pcr(class~., data=seismic,subset=train,scale=TRUE, validation="CV")
+validationplot(pcr.fit,val.type="MSEP")
+pcr.pred=predict(pcr.fit,seismic.test,ncomp=7)
+mean((pcr.pred-seismic.test$class)^2)
+#pcr.fit=pcr(class~.,scale=TRUE,ncomp=7)
+
+summary(pcr.fit)
 ```
 
 # Logistic Regression after Variable Selection
@@ -848,6 +893,8 @@ Our QDA results show that we have roughly 87% of chance to correctly predict tha
 ** No Analysis was performed on Training observations. 
 
 # Appendix
+
+## Correlation Plot
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
 library(ggplot2)
