@@ -829,20 +829,20 @@ Our QDA results show that we have roughly 87% of chance to correctly predict tha
 | Indicator  | 99.67%  | 0%  | 99.83% |  0.76% |
 | LDA | 97.36% | 12.8% | 98.01% | 17.56% |
 | QDA  | * | * | * | * |
-| RDA  | * | * | * | * |
+| RDA  | 97.86% | 0 | 98.89% | 3.1% |
 | Log Regression  | 99.51% | 0% | 99.72% | 4.58% |
 
-* QDA was not performed on seismic-bumps data because of the high multi-collinearity. 
+* QDA was not performed on seismic-bumps data having high multi-collinearity. 
 
 ## Post-Variable Selection
 
- | Model | Test Specificity | Test Sensitivity | Training Specificity | Training Sensitivity |
+ | Model | M1-Test Specificity | M1-Test Sensitivity | M2-Test Specificity | M2-Test Sensitivity |
 | ------------------------- | ----------|------------|-------:|:------:|
 | Indicator  | *  | *  | * |  * |
 | LDA | 123 | * | * | * |
-| QDA  | 86.8% | 41% | ** | ** |
-| RDA  | 86.8% | 41% | ** | ** |
-| Log Regression  | 99.83% | 0% | 99.78% | 2.29% |
+| QDA  | 87% | 41% | 93% | 31% |
+| RDA  | 86.8% | 41% | 98% | 10% |
+| Log Regression  | 99.83% | 0% | 99.83% | 0% |
 
 * Analysis wasn't performed after variable selection.   
 ** No Analysis was performed on Training observations. 
