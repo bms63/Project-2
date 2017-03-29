@@ -5,11 +5,11 @@ date: "3/27/2017"
 output: pdf_document
 ---
 
-# Data overview  
+# Data Overview  
  
-Mining activity has long been associated with mining hazards, such as fires, floods, and toxic contaminants (Dozolme, P., 2016). Among these hazards, seismic hazards are the hardest to detect and predict (Sikora & Wróbel, 2010). Minimizing loss from seismic hazards requires both advanced data collection and analysis. In recent years, more and more advanced seismic and seismoacoustic monitoring systems have come about. Still, the disproportionate number of low-energy versus high-energy seismic phenomena (e.g. > $10^4$J) renders traditional analysis methods insufficient.
+Mining activity has long been associated with mining hazards, such as fires, floods, and toxic contaminants (Dozolme, P., 2016). Among these hazards, seismic hazards are the hardest to detect and predict (Sikora & Wrobel, 2010). Minimizing loss from seismic hazards requires both advanced data collection and analysis. In recent years, more and more advanced seismic and seismoacoustic monitoring systems have come about. Still, the disproportionate number of low-energy versus high-energy seismic phenomena (e.g. > $10^4$J) renders traditional analysis methods insufficient.
 
-In this project, we used the seismic-bumps dataset provided by Sikora & Wróbel (2010), found in the UCI Machine Learning Repository. This seismic-bumps dataset comes from a coal mine located in Poland and contains 2584 observations of 19 attributes. Each observation summarizes seismic activity in the rock mass within one 8-hour shift. Note that the decision attribute, named "class", has values 1 and 0. This variable is the response variable we use in this project. A class value of "1" is categorized as "hazardous state", which essentially indicates a registered seismic bump with high energy (>$10^4$J) in the next shift. A class value "0" represents non-hazardous state in the next shift. According to Bukowska (2006), a number of factors having an effect on seismic hazard occurrence were proposed. Among other factors, the occurrence of tremors with energy > $10^4$J was listed. The purpose is to find whether and how the other 18 variables can be used to determine the hazard status of the mine.
+In this project, we used the seismic-bumps dataset provided by Sikora & Wrobel (2010), found in the UCI Machine Learning Repository. This seismic-bumps dataset comes from a coal mine located in Poland and contains 2584 observations of 19 attributes. Each observation summarizes seismic activity in the rock mass within one 8-hour shift. Note that the decision attribute, named "class", has values 1 and 0. This variable is the response variable we use in this project. A class value of "1" is categorized as "hazardous state", which essentially indicates a registered seismic bump with high energy (>$10^4$J) in the next shift. A class value "0" represents non-hazardous state in the next shift. According to Bukowska (2006), a number of factors having an effect on seismic hazard occurrence were proposed. Among other factors, the occurrence of tremors with energy > $10^4$J was listed. The purpose is to find whether and how the other 18 variables can be used to determine the hazard status of the mine.
 
 ### Table 1. Attribute information of the seismic-bumps dataset
 
@@ -41,7 +41,7 @@ library(klaR);library(gridExtra)
 
 
 #setwd("~/Box Sync/Skool/Spring 2017/557/Project-2-master")
-#setwd("F:/Penn_State/Spring2017/STAT557/Workspace")
+setwd("F:/Penn_State/Spring2017/STAT557/Workspace")
 seismic <- read.csv("seismic.csv")
 ```
 
@@ -139,7 +139,7 @@ mod.posterior <- function(posterior, truth, prob, dimension = length(train)){
 
 ```
  
-## Linear Regression of an Indicator Matrix
+## Linear Regression of an Indicator Matrix:
 
 We begin with linear regression of an indicator matrix as this method can approximate a linear decision boundary among observations belonging to one of two classes. Our model outputs an overall error rate of ~6.8% on the training data and ~6.3% on the test data. However, this comes with no sensitivity, which means we would almost never predict a hazardous event in the mine.
 
@@ -297,7 +297,7 @@ plot.roc(roc.Train, add=TRUE)
 
 ```
 
-## Linear Discriminant Analysis   
+## Linear Discriminant Analysis: 
  
 It is reasonable to believe that each class is distributed normally with some different mean vector. Thus, we implemented an LDA approach. Using a classification threshhold of 0.5 yields an overall error rate of ~7.4% for the training data and ~7.7% for the test data, but with much higher sensitivity than in the previous models. The group means suggest that a mining shift with a higher number of seismic bumps and associated higher released energy (measured in Joules) is correlated with hazard status of the mine in the subsequent shift.
 
@@ -395,7 +395,7 @@ grid.arrange(plot1, plot2, plot3, plot4, ncol=2)
 
 \vspace{-10mm}
 
-## Regularized Discriminant Analysis
+## Regularized Discriminant Analysis:
 
 Similar to LDA, it is reasonable to believe that each class is distributed normally with some different mean vector and covariance matrix, as seen in quadratic discriminant analysis (QDA). RDA allows for a compromise between LDA and QDA. We implemented an RDA approach. Using a classification threshhold of 0.5 yields an overall error rate of ~7.6% for the training data and ~8.2% for the test data. Poor performance on the test data might be indicative of RDA overfitting for this model.
 
@@ -492,12 +492,12 @@ kable(super, caption="Training vs Test")
 
 ```
 
-# Variable selection and refitting
+# Variable Selection and Refitting
 
 Based on high error rate and low prediction accuracy (e.g., low sensitivity) estimates both in the training and test datasets, it is evident that the fitted regression and classification models in the preceding sections are not able to approximate the relationship between response and predictor variables. The strong multicollinearity among some of the predictor variables may have contributed to the high error rate. Therefore,in order tp improve prediction accuracy, we employ some commonly used variable selection methods: stepwise selection, LASSO, and principle component analysis.
 
 
-## Stepwise Variable Selection
+## Stepwise Variable Selection:
 
 We performed forward and backward selection as a starting point. We did further manual selection, and chose the model that produced the lowest AIC score (AIC = -83.097). We denote the model with these variables as Model 1, which can be written as
 \vspace{-4mm}
@@ -511,7 +511,7 @@ fit2 <- lm(class~ genergy + gpuls + nbumps + nbumps2 + nbumps4, data = seismic)
 AIC(fit2)
 ```
 
-## LASSO
+## LASSO:
 We also performed Least Absolute Shrinkage and Selection Operator (LASSO) regression, which fits a model by shrinking some of the coefficients toward exactly zero using the $\mathcal{L}_1$ penalty. According to LASSO, 11 of the 15 covariates should be removed from the model. The 4 remaining covariates are seismic, shift, gpuls, and nbumps. These variables are incorporated into a model, denoted Model 2. 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA, fig.height = 3, fig.cap = 'Plots of covariate coefficients (left) and lambda selection (right) for LASSO.'}
@@ -553,7 +553,7 @@ lasso.coef=predict(out,type="coefficients",s=bestlam)[1:16,]
 #kable(lasso.table, caption="Model 2 through Lasso")
 ```
 
-## Principal component analysis
+## Principal Component Analysis:
 From the result of PCA we find that the first 11 components explain 97.2% of variance. Looking at variable loading from PCA we can see that the variable load is small (<0.6 for the first four component).
 
 ```{r}
@@ -571,8 +571,62 @@ In logistic regression, we first fit the model onto the training data. From the 
 ## Logistic Regression  after Variable Selection
 ##--------------------------------------------
 
-# Model fitted to Training Data
+# Model 1 fitted to Training Data
 glm.train <- glm(class~seismic+shift+gpuls+nbumps, seismic.train, family=binomial)
+
+# Model Summary
+#summary(glm.train)
+
+glm.probs=predict(glm.train, type="response")
+
+glm.pred=rep("0",1938)
+glm.pred[glm.probs >.5]="1"
+confusion <- table(glm.pred ,seismic.train$class)
+#mean(glm.pred==seismic.train$class)
+
+roc.Train <- roc(seismic.train$class, glm.probs, direction = "<")
+
+# Confusion Table
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+error.rate <- (confusion[1,2] + confusion[2,1])/sum(confusion)
+
+#error.rate
+confusion1 <- confusion
+#sensitivity
+#specificity
+
+# Using Training model on Test Data
+glm.probs=predict(glm.train, seismic.test, type="response")
+
+glm.pred=rep("0",646)
+glm.pred[glm.probs >.5]="1"
+confusion <- table(glm.pred, seismic.test$class)
+#mean(glm.pred==seismic.test$class)
+
+# Confusion Table
+sensitivity <- confusion[2,2]/sum(confusion[,2])
+specificity <- confusion[1,1]/sum(confusion[,1])
+error.rate <- (confusion[1,2] + confusion[2,1])/sum(confusion)
+
+
+#error.rate
+confusion2 <- confusion
+#sensitivity
+#specificity
+
+super <- cbind(confusion1,confusion2)
+kable(super, caption="Model-1 vs Model-2")
+
+#roc.Test <- roc(seismic.test$class, glm.probs, direction="<")
+
+# Plotting Roc Curve for Test Data
+#plot.roc(roc.Test, col="blue", auc.polygon=TRUE,main="ROC Curve after Variable Selection", xlab="False Positive Rate", ylab="True Positive Rate", print.auc=TRUE)
+#plot.roc(roc.Train, add=TRUE)
+
+# Model 2 fitted to Training Data
+
+glm.train <- glm(class ~ genergy + gpuls + nbumps + nbumps2 + nbumps4, seismic.train, family=binomial)
 
 # Model Summary
 #summary(glm.train)
@@ -625,7 +679,7 @@ kable(super, caption="Model-1 vs Model-2")
 #plot.roc(roc.Train, add=TRUE)
 ```
 
-## Quadratic Discriminant Analysis after variable selection
+# Quadratic Discriminant Analysis after Variable Selection
 Quadratic Discriminant Analysis (QDA) provides an alternative approach to the LDA in that QDA assumes each class (hazardous vs non-hazardous) has its own covariance matrix. Although LDA classifier is less flexible than RDA, and therefore has lower variance, however, QDA is recommended when training dataset is very large so that variance becomes less of a concern.  
 Using predictor variables from Model 1 and Model 2, we first fit two QDA models onto training observations. Then we use these fitted models to predict seismic activity from test observations. In case of the predictor variables from Model 1, we have achieved significantly higher estimates of sensitivity (30.7%) than model outputs discussed before, with higher specificity (93.1%) and overall error rate 10.7%. However, Model 2 outputs better sensitvity (41%), slightly decreased specificity (86.8%), and slightly increased overall error rate (15.9%). 
 
@@ -669,7 +723,7 @@ kable(super, caption="Model-1 vs Model-2")
 
 ```
 
-## Regularized Discriminant Analysis after variable selection
+# Regularized Discriminant Analysis after Variable Selection
 RDA makes trade-off between LDA and QDA by shrinking the separate covariances of QDA toward a common covariance as in LDA. We performed RDA for Model 1 on the test dataset with varying set of lambda values. It appears that with lambda values between 0-1, sensitivity estimates resulting from RDA varies inversely with increasing lambda values. That means, if lambda = 0, RDA results in similar higher sensitivity value as QDA does, whereas lambda = 1 results in lower sensitivity value similar to LDA.  
 
 *** Look at gamma and lambda values. Make changes according to what make senses. Writing for this section will follow those changes. 
@@ -731,22 +785,40 @@ Our QDA results show that we have roughly 87% of chance to correctly predict tha
 | ------------------------- | ----------|------------|-------:|:------:|
 | Indicator  | 99.67%  | 0%  | 99.83% |  0.76% |
 | LDA | 97.36% | 12.8% | 98.01% | 17.56% |
-| QDA  | * | * | * | * |
-| RDA  | * | * | * | * |
+| QDA  | ** | ** | ** | ** |
+| RDA  | ** | ** | ** | ** |
 | Log Regression  | 99.51% | 0% | 99.72% | 4.58% |
-* QDA and RDA weren't performed on seismic-bumps data having high multi-collinearity. 
+
+** QDA and RDA weren't performed on seismic-bumps data having high multi-collinearity. 
 
 ## Post-Variable Selection
 
- | Model | Test Specificity | Test Sensitivity | Training Specificity | Training Sensitivity |
+| Model 1 | Test Specificity | Test Sensitivity | Training Specificity | Training Sensitivity |
 | ------------------------- | ----------|------------|-------:|:------:|
-| Indicator  | *  | *  | * |  * |
-| LDA | 123 | * | * | * |
-| QDA  | 86.8% | 41% | ** | ** |
-| RDA  | 86.8% | 41% | ** | ** |
+| Indicator  | **  | **  | ** |  ** |
+| LDA | ** | ** | ** | ** |
+| QDA  | 93.08% | 30.77% | *** | *** |
+| RDA  | 97.69% | 10.26% | *** | *** |
 | Log Regression  | 99.83% | 0% | 99.78% | 2.29% |
-* Analysis wasn't performed after variable selection.   
-** No Analysis was performed on Training observations. 
+
+| Model 2 | Test Specificity | Test Sensitivity | Training Specificity | Training Sensitivity |
+| ------------------------- | ----------|------------|-------:|:------:|
+| Indicator  | **  | **  | ** |  ** |
+| LDA | ** | ** | ** | ** |
+| QDA  | 86.8% | 41% | *** | *** |
+| RDA  | 86.8% | 41% | *** | *** |
+| Log Regression  | 99.83% | 0% | 99.56% | 3.05% |
+
+** Analysis wasn't performed after variable selection.   
+*** No Analysis was performed on Training observations. 
+
+# References 
+1. Dozolme, P. (November 21,  ). Specific and Non-Specific Hazards in Underground Mines. Retrieved March 26, 2017, from https://www.thebalance.com/specific-and-non-specific-hazards-in-underground-mines-2367338 
+2. Sikora M., Wrobel L.: Application of rule induction algorithms for analysis of data collected by seismic hazard monitoring systems in coal mines. Archives of Mining Sciences, 55(1), 2010, 91-114. 
+3. Lesniak A., Isakow Z.: Space-time clustering of seismic events and hazard assessment in the Zabrze-Bielszowice coal mine, Poland. Int. Journal of Rock Mechanics and Mining Sciences, 46(5), 2009, 918-928. 
+4. Kabiesz, J.: Effect of the form of data on the quality of mine tremors hazard forecasting using neural networks. Geotechnical and Geological Engineering, 24(5), 2005, 1131-1147. 
+
+
 
 # Appendix
 
