@@ -832,7 +832,7 @@ Our QDA results show that we have roughly 87% of chance to correctly predict tha
 | RDA  | * | * | * | * |
 | Log Regression  | 99.51% | 0% | 99.72% | 4.58% |
 
-* QDA and RDA weren't performed on seismic-bumps data having high multi-collinearity. 
+* QDA was not performed on seismic-bumps data because of the high multi-collinearity. 
 
 ## Post-Variable Selection
 
